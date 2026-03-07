@@ -36,7 +36,7 @@ const todoCreateBody = t.Object({
 const todoUpdateBody = t.Partial(
   t.Object({
     title: t.String(),
-    description: t.String(),
+    description: t.Union([t.String(), t.Null()]),
     completed: t.Boolean(),
     dueDate: t.Union([t.String(), t.Null()]),
     category: t.Union([t.String(), t.Null()]),
@@ -357,8 +357,9 @@ const app = new Elysia({ prefix: '/api' })
           completed: t.Optional(t.String()),
         })
       ),
-      beforeHandle: ({ user }) =>
-        !user && jsonError('Unauthorized', 'UNAUTHORIZED', 401),
+      beforeHandle: ({ user }) => {
+        if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
+      },
     }
   )
   .get(
@@ -378,8 +379,9 @@ const app = new Elysia({ prefix: '/api' })
     },
     {
       params: t.Object({ id: t.String() }),
-      beforeHandle: ({ user }) =>
-        !user && jsonError('Unauthorized', 'UNAUTHORIZED', 401),
+      beforeHandle: ({ user }) => {
+        if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
+      },
     }
   )
   .post(
@@ -407,8 +409,9 @@ const app = new Elysia({ prefix: '/api' })
     },
     {
       body: todoCreateBody,
-      beforeHandle: ({ user }) =>
-        !user && jsonError('Unauthorized', 'UNAUTHORIZED', 401),
+      beforeHandle: ({ user }) => {
+        if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
+      },
     }
   )
   .patch(
@@ -443,8 +446,9 @@ const app = new Elysia({ prefix: '/api' })
     {
       params: t.Object({ id: t.String() }),
       body: todoUpdateBody,
-      beforeHandle: ({ user }) =>
-        !user && jsonError('Unauthorized', 'UNAUTHORIZED', 401),
+      beforeHandle: ({ user }) => {
+        if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
+      },
     }
   )
   .delete(
@@ -465,8 +469,9 @@ const app = new Elysia({ prefix: '/api' })
     },
     {
       params: t.Object({ id: t.String() }),
-      beforeHandle: ({ user }) =>
-        !user && jsonError('Unauthorized', 'UNAUTHORIZED', 401),
+      beforeHandle: ({ user }) => {
+        if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
+      },
     }
   )
 
