@@ -14,6 +14,7 @@
 | **Auth** | Register + Login ด้วย JWT (ไม่บังคับ Refresh Token ในเฟส 1) |
 | **RBAC** | มีบทบาท (Role) อย่างน้อย Admin / User และตรวจสิทธิ์ตาม Role |
 | **User Management** | หน้ารวม User ทั้งหมด (Admin เท่านั้น) + หน้าโปรไฟล์/รายละเอียดแต่ละ User |
+| **Dashboard** | 4 หน้า (Overview, Customer Analysis/RFM, Branch Performance, Interactive Todo) — Interactive & Responsive |
 | **Database** | PostgreSQL (รันด้วย Docker Compose สำหรับ dev) |
 | **Testing** | Unit + Integration ด้วย Vitest, เป้าหมาย Coverage 100% |
 
@@ -56,6 +57,7 @@
 | `passwordHash` | varchar | ไม่ null |
 | `name` | varchar | ชื่อแสดง (nullable ได้) |
 | `role` | enum `user_role` | `'admin'` \| `'user'` |
+| `lastLoginAt` | timestamp | nullable — อัปเดตเมื่อ login (ใช้สำหรับ RFM Recency) |
 | `createdAt` | timestamp | default now() |
 | `updatedAt` | timestamp | default now(), อัปเดตเมื่อแก้ |
 
@@ -69,14 +71,26 @@
 | `description` | text | nullable |
 | `completed` | boolean | default false |
 | `dueDate` | date | nullable |
+| `category` | varchar | nullable — Admin, Marketing, Production (สำหรับ Dashboard Overview) |
+| `priority` | int | nullable — 1–5 (สำหรับ RFM Impact) |
+| `storyPoints` | int | nullable — สำหรับ RFM Impact (optional) |
+| `workspaceId` | uuid (FK) | nullable — เชื่อม Department/Workspace (สำหรับ Branch Performance) |
 | `createdAt` | timestamp | default now() |
 | `updatedAt` | timestamp | default now() |
 
-- Index: `todos_userId`, `todos_completed` (ถ้าต้องการ filter บ่อย)
+- Index: `todos_userId`, `todos_completed`, `todos_category`, `todos_workspaceId`
 
-### 4.3 สรุปไฟล์ Schema
+### 4.3 ตาราง `workspaces` (สำหรับ Branch Performance)
 
-- `lib/schema.ts` — กำหนด `users`, `todos`, relations และถ้าต้องการ enum `user_role` ใน Drizzle
+| Column | Type | Notes |
+|--------|------|--------|
+| `id` | uuid (PK) | default `crypto.randomUUID()` |
+| `name` | varchar | ชื่อ Department/Workspace (เช่น Bakery Unit, Front-end Unit) |
+| `createdAt` | timestamp | default now() |
+
+### 4.4 สรุปไฟล์ Schema
+
+- `lib/schema.ts` — กำหนด `users`, `todos`, `workspaces`, relations และ enum `user_role` ใน Drizzle
 
 ---
 
@@ -116,8 +130,18 @@ Prefix: `/api` (ให้ตรงกับ `app/api/[[...slugs]]/route.ts`)
 | DELETE | `/api/todos/:id` | เจ้าของหรือ admin | ลบ Todo |
 
 - Validation ใช้ Elysia `t` หรือ drizzle-typebox ตาม skill (เช่น `t.Omit(createInsertSchema(todo), ['id','createdAt','updatedAt'])`)
+- Todo body รองรับ `category`, `priority`, `storyPoints`, `workspaceId` สำหรับ Dashboard
 
-### 5.4 Error Response (มาตรฐาน)
+### 5.4 Dashboard (ต้องมี JWT; ตรวจ role — admin เห็นทุกอย่าง)
+
+| Method | Path | สิทธิ์ | คำอธิบาย |
+|--------|------|--------|----------|
+| GET | `/api/dashboard/overview` | admin | KPI (totalCompleted, completionRate, backlog), breakdown ตาม category, แนวโน้มต่อวัน |
+| GET | `/api/dashboard/customers` | admin | RFM data — Recency, Frequency, Impact ต่อ User; segments (Power Users, Hibernating, At Risk) |
+| GET | `/api/dashboard/branches` | admin | ประสิทธิภาพแต่ละ Workspace, Heatmap (Weekday × Hour) แสดงช่วง Active |
+| GET | `/api/workspaces` | admin | รายการ Workspace (สำหรับ Branch Performance และ Todo) |
+
+### 5.5 Error Response (มาตรฐาน)
 
 - รูปแบบ: `{ error: string, code?: string }` (JSON)
 - HTTP status: `401` Unauthorized, `403` Forbidden, `404` Not Found, `422` Validation Error
@@ -128,13 +152,48 @@ Prefix: `/api` (ให้ตรงกับ `app/api/[[...slugs]]/route.ts`)
 
 | Path | ใครเข้าได้ | คำอธิบาย |
 |------|------------|----------|
-| `/` | ล็อกอินแล้ว | Dashboard / หน้า Todo หลัก (รายการ + เพิ่ม/แก้/ลบ) |
+| `/` | ล็อกอินแล้ว | หน้าแรก — redirect ไป Dashboard Overview หรือ Todo |
 | `/login` | Guest | ฟอร์มล็อกอิน |
 | `/register` | Guest | ฟอร์มสมัคร |
+| `/dashboard` | ล็อกอินแล้ว | Dashboard hub (หรือใช้ tab/nav ภายใน) |
+| `/dashboard/overview` | Admin | Overview All — ภาพรวม Productivity |
+| `/dashboard/customers` | Admin | Customer Analysis — RFM Segment |
+| `/dashboard/branches` | Admin | Branch Performance — ประสิทธิภาพตาม Workspace |
+| `/dashboard/todos` | ล็อกอินแล้ว | Interactive Todo List — จัดการงาน |
 | `/admin/users` | Admin | ตาราง/การ์ดรายชื่อ User ทั้งหมด |
 | `/admin/users/[id]` | Admin | หน้ารายละเอียด User + Todo ของ User นั้น (optional) |
 
-- กลุ่ม route: `(auth)` สำหรับ login/register, `(dashboard)` สำหรับ `/`, `(admin)` สำหรับ `/admin`
+- กลุ่ม route: `(auth)` สำหรับ login/register, `(dashboard)` สำหรับ Dashboard 4 หน้า, `(admin)` สำหรับ `/admin`
+
+### 6.1 Dashboard 4 หน้า (Interactive & Responsive)
+
+#### 1. Overview All — ภาพรวมการจัดการงาน
+เน้นดู **Productivity** ในภาพรวมแทนรายได้
+
+- **KPI Cards**: จำนวนงานที่เสร็จสิ้น (Total Completed), อัตราความสำเร็จ (Completion Rate %), งานที่ค้างอยู่ (Backlog)
+- **Dimension Breakdown**:
+  - กราฟวงกลม (Pie): สัดส่วนงานตาม Category (Admin, Marketing, Production)
+  - กราฟเส้น (Line): แนวโน้มงานที่เสร็จในแต่ละวัน
+
+#### 2. Customer Analysis — วิเคราะห์พฤติกรรมผู้ใช้งาน (RFM Segment)
+ใช้ RFM เพื่อวิเคราะห์ **Engagement** ของคนในทีม:
+
+- **Recency**: เข้ามาจัดการงานล่าสุดเมื่อไหร่?
+- **Frequency**: เข้ามาใช้งานหรือติ๊กจบงานบ่อยแค่ไหน?
+- **Monetary (Impact)**: งานที่ทำเสร็จมี Priority หรือ Story Points รวมเท่าไหร่?
+- **Segments**: แบ่งกลุ่มเป็น Power Users (ทำงานเก่ง), Hibernating (ไม่ค่อยเข้าแอป), At Risk (งานดองเยอะ)
+
+#### 3. Branch Performance — ติดตามประสิทธิภาพตามหน่วยงาน/Workspace
+แบ่งตาม Department หรือ Workspace:
+
+- **Performance Tracking**: เปรียบเทียบความเร็วในการเคลียร์งานระหว่างแต่ละ Workspace (เช่น Bakery Unit vs Front-end Unit)
+- **Traffic Analysis**: กราฟ Heatmap แสดงช่วงเวลาที่ทีม Active ที่สุดในแต่ละ Weekday × Hour เพื่อดูช่วงเวลาทำงานเยอะ
+
+#### 4. Interactive Todo List — หน้าจัดการงาน
+หน้าสำหรับ Input ข้อมูลจริง รองรับ Responsive:
+
+- **Mobile View**: แสดงเป็น List รายการที่กดติ๊กถูกได้ง่าย (Checklist style)
+- **Desktop View**: แสดงเป็นตารางหรือ Kanban Board เพื่อให้เห็นสถานะงานชัดเจน
 - ป้องกัน route: ใช้ Middleware หรือ Proxy (Next 16: `proxy.ts`) อ่าน JWT จาก cookie และ redirect guest ไป `/login`, ผู้ใช้ธรรมดาเข้า `/admin/*` ไป `/`
 
 ---
@@ -148,7 +207,12 @@ app/
 │   ├── login/page.tsx
 │   └── register/page.tsx
 ├── (dashboard)/
-│   └── page.tsx                 # Todo list + form (หรือแยก /todos)
+│   ├── page.tsx                 # Redirect หรือ hub
+│   └── dashboard/
+│       ├── overview/page.tsx    # Overview All (KPI, Pie, Line)
+│       ├── customers/page.tsx   # Customer Analysis (RFM)
+│       ├── branches/page.tsx    # Branch Performance (Heatmap)
+│       └── todos/page.tsx       # Interactive Todo List (List/Kanban)
 ├── admin/
 │   └── users/
 │       ├── page.tsx             # List all users
@@ -171,8 +235,9 @@ drizzle/
 components/
 ├── ui/                          # shadcn
 ├── auth/                        # LoginForm, RegisterForm
-├── todos/                       # TodoList, TodoItem, TodoForm
-└── users/                       # UserTable, UserCard (admin)
+├── todos/                       # TodoList, TodoItem, TodoForm, KanbanBoard
+├── users/                       # UserTable, UserCard (admin)
+└── dashboard/                   # KPIcards, PieChart, LineChart, Heatmap, RFMSegments
 ```
 
 ---
@@ -185,6 +250,7 @@ components/
   - หน้า Todo: รายการเป็นการ์ดหรือ list ที่อ่านง่าย, มีปุ่มทำเครื่องหมายเสร็จ, แก้, ลบ; ฟอร์มเพิ่ม/แก้ใช้ Dialog หรือ Sheet บนมือถือ
   - หน้า Admin Users: ตารางที่ responsive (บนมือถืออาจเป็นการ์ดหรือ list แทน table)
 - **Component ที่ใช้**: Button, Card, Input, Form (react-hook-form + zod), Table, Dialog, Sheet, Toast (sonner), Avatar, Badge (สำหรับ role/status)
+- **Charts (Dashboard)**: ใช้ Recharts หรือ shadcn/ui charts — Pie, Line, Heatmap สำหรับ Overview, RFM, Branch Performance
 
 ---
 
@@ -205,6 +271,9 @@ bun add -D vitest @vitejs/plugin-react jsdom @testing-library/react @testing-lib
 bun add @tanstack/react-query next-themes
 bunx shadcn@latest init
 bunx shadcn@latest add button card input form table dialog sheet toast avatar badge
+# Dashboard charts
+bun add recharts
+# หรือ bunx shadcn@latest add chart (ถ้ามีใน shadcn)
 # ตามความต้องการ: dropdown-menu, skeleton, separator
 ```
 
@@ -291,9 +360,9 @@ Coverage 100%: ตั้งใน `vitest.config.ts` ให้ `lines/functions/
 5. **Frontend**  
    - shadcn init + components  
    - หน้า login, register  
-   - หน้า Dashboard (Todo list + form)  
+   - Dashboard 4 หน้า: Overview (KPI, Pie, Line), Customer Analysis (RFM), Branch Performance (Heatmap), Interactive Todo (List/Kanban)  
    - หน้า Admin: users list, user detail  
-   - เชื่อม Eden + React Query, โหลด/สร้าง/อัปเดต/ลบ
+   - เชื่อม Eden + React Query, Recharts; โหลด/สร้าง/อัปเดต/ลบ
    - Component test สำหรับฟอร์มและหน้าหลักตามหัวข้อ 12.2
 
 6. **ปรับปรุง + ปิด Coverage**  
@@ -307,7 +376,8 @@ Coverage 100%: ตั้งใน `vitest.config.ts` ให้ `lines/functions/
 - [ ] **JWT เก็บที่ไหน**: Cookie (httpOnly) vs ส่งใน response แล้วให้ frontend เก็บ (localStorage / memory) และส่งใน Header — แนะนำ cookie สำหรับ production
 - [ ] **User คนแรก**: สมัครคนแรกเป็น `admin` อัตโนมัติ หรือมี seed script สร้าง admin หนึ่งคน
 - [ ] **Refresh Token**: จะทำในเฟส 1 หรือไม่ (ถ้าไม่ทำ เฟส 1 ใช้แค่ access token หมดอายุแล้วให้ login ใหม่)
-- [ ] **Path หน้า Todo**: ใช้ `/` เป็นหน้า Todo เลย หรือแยกเป็น `/todos` แล้ว redirect `/` ไป `/todos` หรือ dashboard
+- [ ] **Path หน้า Todo**: ใช้ `/` เป็นหน้า Todo เลย หรือแยกเป็น `/dashboard/todos` แล้ว redirect `/` ไป Dashboard hub
+- [ ] **Workspace**: สร้าง seed data สำหรับ Workspace (Department) หรือให้ Admin สร้างเองผ่าน CRUD
 
 ---
 
