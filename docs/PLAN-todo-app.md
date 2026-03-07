@@ -84,12 +84,13 @@
 
 Prefix: `/api` (ให้ตรงกับ `app/api/[[...slugs]]/route.ts`)
 
-### 5.1 Auth (ไม่ต้องมี JWT)
+### 5.1 Auth (public routes — ไม่ต้องส่ง JWT)
 
 | Method | Path | Body | คำอธิบาย |
 |--------|------|------|----------|
 | POST | `/api/auth/register` | `{ email, password, name? }` | สมัครสมาชิก, return JWT + user (ไม่มี passwordHash) |
 | POST | `/api/auth/login` | `{ email, password }` | ล็อกอิน, return JWT + user |
+| POST | `/api/auth/logout` | — | ล็อกเอาท์ — clear auth cookie (ต้องมี JWT ถ้าใช้ cookie) |
 
 - JWT เก็บใน cookie (httpOnly, secure ใน prod) หรือส่งกลับใน response แล้วให้ frontend เก็บ (localStorage / memory) แล้วส่งใน Header `Authorization: Bearer <token>` — แนะนำ cookie เพื่อความปลอดภัย
 - JWT payload อย่างน้อย: `{ sub: userId, role, iat, exp }`
@@ -98,7 +99,7 @@ Prefix: `/api` (ให้ตรงกับ `app/api/[[...slugs]]/route.ts`)
 
 | Method | Path | สิทธิ์ | คำอธิบาย |
 |--------|------|--------|----------|
-| GET | `/api/users` | admin | รายชื่อ User ทั้งหมด (paginate ได้) |
+| GET | `/api/users` | admin | รายชื่อ User ทั้งหมด — paginate: `?page=1&limit=20` (default limit 20) |
 | GET | `/api/users/me` | user/admin | โปรไฟล์ตัวเอง |
 | GET | `/api/users/:id` | admin หรือ self | รายละเอียด User ตาม id |
 | PATCH | `/api/users/:id` | admin หรือ self | แก้ name; admin แก้ role ได้ |
@@ -115,6 +116,11 @@ Prefix: `/api` (ให้ตรงกับ `app/api/[[...slugs]]/route.ts`)
 | DELETE | `/api/todos/:id` | เจ้าของหรือ admin | ลบ Todo |
 
 - Validation ใช้ Elysia `t` หรือ drizzle-typebox ตาม skill (เช่น `t.Omit(createInsertSchema(todo), ['id','createdAt','updatedAt'])`)
+
+### 5.4 Error Response (มาตรฐาน)
+
+- รูปแบบ: `{ error: string, code?: string }` (JSON)
+- HTTP status: `401` Unauthorized, `403` Forbidden, `404` Not Found, `422` Validation Error
 
 ---
 
@@ -270,7 +276,7 @@ Coverage 100%: ตั้งใน `vitest.config.ts` ให้ `lines/functions/
 2. **Auth**  
    - `lib/auth.ts`: hash password, create/verify JWT  
    - `lib/auth.test.ts`: unit test ให้ coverage 100%
-   - POST `/api/auth/register`, POST `/api/auth/login`  
+   - POST `/api/auth/register`, POST `/api/auth/login`, POST `/api/auth/logout`  
    - ตั้งค่า cookie หรือ return token ให้ frontend
 
 3. **Middleware / Guard**  
