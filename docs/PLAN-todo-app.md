@@ -245,12 +245,32 @@ components/
 ## 8. UI/UX (Mobile First + Responsive)
 
 - **Design**: ใช้ shadcn/ui (Tailwind v4, OKLCH) — ตาม reference tailwind-v4 + shadcn
+
+### 8.1 ความสวยงาม / Visual Design (Modern Yellow Blue Palette)
+
+**Tone**: สมัยใหม่ สะอาดตา ใช้สีสดใสแต่ไม่ฉูดฉาด
+
+**Color Palette — Modern Yellow Blue Combinations**:
+
+| บทบาท | สี | Hex (ตัวอย่าง) | ใช้กับ |
+|-------|-----|----------------|--------|
+| Primary (น้ำเงิน) | Blue | `#2563eb` | ปุ่มหลัก, Link, Header, ฟอร์ม focus |
+| Accent (เหลือง) | Yellow/Amber | `#eab308` | Badge, highlight, CTA, สถานะสำเร็จ |
+| Background Light | Off-white / Cream | `#fefce8` | พื้นหลังแบบ light |
+| Background Dark | Slate Blue | `#1e293b` | พื้นหลังแบบ dark mode |
+| Neutral | Gray Slate | `#64748b` | ข้อความรอง, Border |
+| Success | Green | `#22c55e` | Completed, ติ๊กเสร็จ |
+| Warning | Amber | `#f59e0b` | At Risk, ค้างอยู่ |
+
+- **Tailwind v4**: ตั้งค่า CSS variables ใน `globals.css` หรือ `tailwind.config` ให้ `--primary`, `--accent`, `--background` สอดคล้องกับ palette นี้
+- **Mode**: รองรับ Light/Dark ตาม next-themes; Dark mode ใช้โทน Blue สุกใสคู่กับ Yellow อ่อนลง
+
 - **หลักการ**
   - Mobile First: เลย์เอาต์และขนาดเริ่มจากมือถือ แล้วค่อยใช้ `sm:`, `md:` สำหรับ tablet/desktop
   - หน้า Todo: รายการเป็นการ์ดหรือ list ที่อ่านง่าย, มีปุ่มทำเครื่องหมายเสร็จ, แก้, ลบ; ฟอร์มเพิ่ม/แก้ใช้ Dialog หรือ Sheet บนมือถือ
   - หน้า Admin Users: ตารางที่ responsive (บนมือถืออาจเป็นการ์ดหรือ list แทน table)
 - **Component ที่ใช้**: Button, Card, Input, Form (react-hook-form + zod), Table, Dialog, Sheet, Toast (sonner), Avatar, Badge (สำหรับ role/status)
-- **Charts (Dashboard)**: ใช้ Recharts หรือ shadcn/ui charts — Pie, Line, Heatmap สำหรับ Overview, RFM, Branch Performance
+- **Charts (Dashboard)**: ใช้ Recharts หรือ shadcn/ui charts — Pie, Line, Heatmap สำหรับ Overview, RFM, Branch Performance — ใช้โทน Yellow Blue ให้เข้ากับ palette
 
 ---
 
