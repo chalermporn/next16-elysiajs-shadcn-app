@@ -2,6 +2,8 @@
 
 เอกสารนี้เป็น **แผน (Planning)** สำหรับแอป Todo List แบบครบวงจร — มี RBAC, JWT Login/Register, จัดการ User ทั้งหมด + แต่ละ User, หน้า Todo สมัยใหม่ รองรับ Mobile First และ Responsive เก็บข้อมูลใน PostgreSQL
 
+- **Design Reference**: `demo/index.tsx` — ใช้เป็นต้นแบบสำหรับ UI layout, components และ styling ทุกหน้า
+
 **กรุณาตรวจและอนุมัติแผนก่อนเริ่ม implement**
 
 ---
@@ -150,6 +152,8 @@ Prefix: `/api` (ให้ตรงกับ `app/api/[[...slugs]]/route.ts`)
 
 ## 6. โครงสร้าง Route ฝั่ง Frontend (Next.js App Router)
 
+> **Layout Reference**: ใช้ `demo/index.tsx` — `Sidebar`, `MobileHeader`, `DesktopHeader` เป็นต้นแบบสำหรับ layout หลัก
+
 | Path | ใครเข้าได้ | คำอธิบาย |
 |------|------------|----------|
 | `/` | ล็อกอินแล้ว | หน้าแรก — redirect ไป Dashboard Overview หรือ Todo |
@@ -160,14 +164,16 @@ Prefix: `/api` (ให้ตรงกับ `app/api/[[...slugs]]/route.ts`)
 | `/dashboard/customers` | Admin | Customer Analysis — RFM Segment |
 | `/dashboard/branches` | Admin | Branch Performance — ประสิทธิภาพตาม Workspace |
 | `/dashboard/todos` | ล็อกอินแล้ว | Interactive Todo List — จัดการงาน |
-| `/admin/users` | Admin | ตาราง/การ์ดรายชื่อ User ทั้งหมด |
+| `/admin/users` | Admin | ตาราง/การ์ดรายชื่อ User ทั้งหมด (demo: `UserManagementScreen`) |
 | `/admin/users/[id]` | Admin | หน้ารายละเอียด User + Todo ของ User นั้น (optional) |
 
 - กลุ่ม route: `(auth)` สำหรับ login/register, `(dashboard)` สำหรับ Dashboard 4 หน้า, `(admin)` สำหรับ `/admin`
 
 ### 6.1 Dashboard 4 หน้า (Interactive & Responsive)
 
-#### 1. Overview All — ภาพรวมการจัดการงาน
+> **Reference**: ทุกหน้ารับดีไซน์จาก `demo/index.tsx` (OverviewScreen, CustomerAnalysisScreen, BranchPerformanceScreen, TodosScreen)
+
+#### 1. Overview All — ภาพรวมการจัดการงาน (demo: `OverviewScreen`)
 เน้นดู **Productivity** ในภาพรวมแทนรายได้
 
 - **KPI Cards**: จำนวนงานที่เสร็จสิ้น (Total Completed), อัตราความสำเร็จ (Completion Rate %), งานที่ค้างอยู่ (Backlog)
@@ -175,7 +181,7 @@ Prefix: `/api` (ให้ตรงกับ `app/api/[[...slugs]]/route.ts`)
   - กราฟวงกลม (Pie): สัดส่วนงานตาม Category (Admin, Marketing, Production)
   - กราฟเส้น (Line): แนวโน้มงานที่เสร็จในแต่ละวัน
 
-#### 2. Customer Analysis — วิเคราะห์พฤติกรรมผู้ใช้งาน (RFM Segment)
+#### 2. Customer Analysis — วิเคราะห์พฤติกรรมผู้ใช้งาน (RFM) (demo: `CustomerAnalysisScreen`)
 ใช้ RFM เพื่อวิเคราะห์ **Engagement** ของคนในทีม:
 
 - **Recency**: เข้ามาจัดการงานล่าสุดเมื่อไหร่?
@@ -183,13 +189,13 @@ Prefix: `/api` (ให้ตรงกับ `app/api/[[...slugs]]/route.ts`)
 - **Monetary (Impact)**: งานที่ทำเสร็จมี Priority หรือ Story Points รวมเท่าไหร่?
 - **Segments**: แบ่งกลุ่มเป็น Power Users (ทำงานเก่ง), Hibernating (ไม่ค่อยเข้าแอป), At Risk (งานดองเยอะ)
 
-#### 3. Branch Performance — ติดตามประสิทธิภาพตามหน่วยงาน/Workspace
+#### 3. Branch Performance — ติดตามประสิทธิภาพตามหน่วยงาน/Workspace (demo: `BranchPerformanceScreen`)
 แบ่งตาม Department หรือ Workspace:
 
 - **Performance Tracking**: เปรียบเทียบความเร็วในการเคลียร์งานระหว่างแต่ละ Workspace (เช่น Bakery Unit vs Front-end Unit)
 - **Traffic Analysis**: กราฟ Heatmap แสดงช่วงเวลาที่ทีม Active ที่สุดในแต่ละ Weekday × Hour เพื่อดูช่วงเวลาทำงานเยอะ
 
-#### 4. Interactive Todo List — หน้าจัดการงาน
+#### 4. Interactive Todo List — หน้าจัดการงาน (demo: `TodosScreen`)
 หน้าสำหรับ Input ข้อมูลจริง รองรับ Responsive:
 
 - **Mobile View**: แสดงเป็น List รายการที่กดติ๊กถูกได้ง่าย (Checklist style)
@@ -234,43 +240,60 @@ drizzle/
 
 components/
 ├── ui/                          # shadcn
-├── auth/                        # LoginForm, RegisterForm
-├── todos/                       # TodoList, TodoItem, TodoForm, KanbanBoard
-├── users/                       # UserTable, UserCard (admin)
-└── dashboard/                   # KPIcards, PieChart, LineChart, Heatmap, RFMSegments
+├── auth/                        # LoginForm, RegisterForm — อิง LoginScreen, RegisterScreen จาก demo
+├── todos/                       # TodoList, TodoItem, TodoForm — อิง TodosScreen จาก demo
+├── users/                       # UserTable, UserCard — อิง UserManagementScreen จาก demo
+└── dashboard/                   # KPIcards, PieChart, LineChart, Heatmap — อิง OverviewScreen, CustomerAnalysisScreen, BranchPerformanceScreen จาก demo
+
+demo/
+└── index.tsx                    # Design Reference — UI/UX ต้นแบบสำหรับ implement ตามแผน
 ```
 
 ---
 
 ## 8. UI/UX (Mobile First + Responsive)
 
-- **Design**: ใช้ shadcn/ui (Tailwind v4, OKLCH) — ตาม reference tailwind-v4 + shadcn
+- **Design Reference**: ใช้ `demo/index.tsx` เป็นต้นแบบ (Design Reference) สำหรับ layout, components และ styling ทั้งหมด
+- **Stack**: shadcn/ui (Tailwind v4, OKLCH) — ปรับให้สอดคล้องกับ reference `demo/index.tsx`
 
-### 8.1 ความสวยงาม / Visual Design (Modern Yellow Blue Palette)
+### 8.1 Design Reference — demo/index.tsx
 
-**Tone**: สมัยใหม่ สะอาดตา ใช้สีสดใสแต่ไม่ฉูดฉาด
+| ส่วน | Reference ใน demo | รายละเอียด |
+|------|-------------------|-------------|
+| **Brand** | `TodoFlow` (Todo + Flow สี amber-400) | Sidebar header, โลโก้ CheckCircle2 บนพื้น gradient blue |
+| **Sidebar** | `Sidebar` (dark `#0f172a`) | 280px, User Card แสดง role (admin=amber, user=blue), ปุ่มออกจากระบบ |
+| **Auth** | `LoginScreen`, `RegisterScreen` | Card rounded-3xl, gradient header blue-600→blue-800, input focus ring blue |
+| **Todos** | `TodosScreen` | Filter pills (all/active/completed), Todo card rounded-2xl, Mobile FAB |
+| **Overview** | `OverviewScreen` | KPI cards, Pie (conic-gradient), Bar chart แนวโน้ม |
+| **RFM** | `CustomerAnalysisScreen` | Mobile: cards; Desktop: table; segment badge สีต่างกัน |
+| **Branch** | `BranchPerformanceScreen` | Leaderboard + Heatmap (Weekday × ระยะเวลา) |
+| **Users** | `UserManagementScreen` | การ์ด grid, role badge (admin=amber, user=slate) |
 
-**Color Palette — Modern Yellow Blue Combinations**:
+### 8.2 Color Palette — จาก demo (Modern Blue + Amber)
 
-| บทบาท | สี | Hex (ตัวอย่าง) | ใช้กับ |
-|-------|-----|----------------|--------|
-| Primary (น้ำเงิน) | Blue | `#2563eb` | ปุ่มหลัก, Link, Header, ฟอร์ม focus |
-| Accent (เหลือง) | Yellow/Amber | `#eab308` | Badge, highlight, CTA, สถานะสำเร็จ |
-| Background Light | Off-white / Cream | `#fefce8` | พื้นหลังแบบ light |
-| Background Dark | Slate Blue | `#1e293b` | พื้นหลังแบบ dark mode |
-| Neutral | Gray Slate | `#64748b` | ข้อความรอง, Border |
-| Success | Green | `#22c55e` | Completed, ติ๊กเสร็จ |
-| Warning | Amber | `#f59e0b` | At Risk, ค้างอยู่ |
+| บทบาท | สี | Tailwind/Hex | ใช้กับ |
+|-------|-----|--------------|--------|
+| Primary | Blue | `blue-600`, `#2563eb` | ปุ่ม, Link, Header, Sidebar active |
+| Accent | Amber | `amber-400`, `amber-500` | Brand "Flow", Badge, CTA, สถานะสำเร็จ |
+| Sidebar Dark | Slate | `bg-[#0f172a]` | Sidebar พื้นหลัง |
+| Background Light | Slate | `bg-slate-50` | พื้นหลังหน้า |
+| Success | Green | `green-500` | CheckCircle2 เสร็จแล้ว |
+| Warning/At Risk | Amber/Red | `amber-500`, `red-50` | Backlog, At Risk segment |
+| Neutral | Slate | `slate-400`, `slate-600` | ข้อความรอง, border-slate-200 |
 
-- **Tailwind v4**: ตั้งค่า CSS variables ใน `globals.css` หรือ `tailwind.config` ให้ `--primary`, `--accent`, `--background` สอดคล้องกับ palette นี้
-- **Mode**: รองรับ Light/Dark ตาม next-themes; Dark mode ใช้โทน Blue สุกใสคู่กับ Yellow อ่อนลง
+- **Tailwind v4**: ตั้งค่า CSS variables ให้สอดคล้องกับ demo palette
+- **Mode**: รองรับ Light/Dark ตาม next-themes
+
+### 8.3 Component Patterns (จาก demo)
 
 - **หลักการ**
-  - Mobile First: เลย์เอาต์และขนาดเริ่มจากมือถือ แล้วค่อยใช้ `sm:`, `md:` สำหรับ tablet/desktop
-  - หน้า Todo: รายการเป็นการ์ดหรือ list ที่อ่านง่าย, มีปุ่มทำเครื่องหมายเสร็จ, แก้, ลบ; ฟอร์มเพิ่ม/แก้ใช้ Dialog หรือ Sheet บนมือถือ
-  - หน้า Admin Users: ตารางที่ responsive (บนมือถืออาจเป็นการ์ดหรือ list แทน table)
-- **Component ที่ใช้**: Button, Card, Input, Form (react-hook-form + zod), Table, Dialog, Sheet, Toast (sonner), Avatar, Badge (สำหรับ role/status)
-- **Charts (Dashboard)**: ใช้ Recharts หรือ shadcn/ui charts — Pie, Line, Heatmap สำหรับ Overview, RFM, Branch Performance — ใช้โทน Yellow Blue ให้เข้ากับ palette
+  - Mobile First: `md:hidden` / `hidden md:block` สำหรับ responsive
+  - หน้า Todo: Filter pills, Todo card พร้อม checkbox, category badge, ปุ่มลบ (แสดงตอน hover บน desktop)
+  - หน้า Admin Users: การ์ด grid (1–3 คอลัมน์ตาม breakpoint)
+- **Spacing**: `p-4 md:p-8`, `rounded-2xl` / `rounded-3xl`, `shadow-sm` / `border border-slate-100`
+- **Icons**: lucide-react — CheckCircle2, LayoutDashboard, Users, Activity, ListTodo, LogOut, Plus, Trash2
+- **Component ที่ใช้**: Button, Card, Input, Form (react-hook-form + zod), Table, Dialog, Sheet, Toast (sonner), Avatar, Badge
+- **Charts**: Recharts หรือ shadcn/ui charts — สี Production=blue, Marketing=amber, Admin=slate ตาม demo
 
 ---
 
