@@ -164,7 +164,7 @@ export function SidebarToggle({
     <Button
       variant="ghost"
       size="icon"
-      className="md:hidden -ml-2 text-slate-600"
+      className="md:hidden -ml-2 text-muted-foreground hover:text-foreground"
       onClick={onClick}
     >
       <Menu size={24} />

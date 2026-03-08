@@ -53,6 +53,13 @@ const userUpdateBody = t.Partial(
   })
 );
 
+const userCreateBody = t.Object({
+  name: t.String(),
+  email: t.String({ format: 'email' }),
+  password: t.String({ minLength: 6 }),
+  role: t.Union([t.Literal('admin'), t.Literal('user')]),
+});
+
 function jsonError(message: string, code: string, status: number) {
   return new Response(JSON.stringify({ error: message, code }), {
     status,
@@ -196,6 +203,48 @@ const app = new Elysia({ prefix: '/api' })
           limit: t.Optional(t.String()),
         })
       ),
+      beforeHandle({ user }) {
+        if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
+        if (user.role !== 'admin') return jsonError('Forbidden', 'FORBIDDEN', 403);
+      },
+    }
+  )
+  .post(
+    '/users',
+    async ({ body, db, user }) => {
+      if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
+      if (user.role !== 'admin') return jsonError('Forbidden', 'FORBIDDEN', 403);
+      const existing = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, body.email))
+        .limit(1);
+      if (existing.length > 0) {
+        return jsonError('อีเมลนี้มีในระบบแล้ว', 'EMAIL_EXISTS', 422);
+      }
+      const passwordHash = await hashPassword(body.password);
+      const [u] = await db
+        .insert(users)
+        .values({
+          email: body.email,
+          passwordHash,
+          name: body.name,
+          role: body.role,
+        })
+        .returning({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          role: users.role,
+          lastLoginAt: users.lastLoginAt,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        });
+      if (!u) return jsonError('สร้างผู้ใช้ไม่สำเร็จ', 'CREATE_FAILED', 500);
+      return u;
+    },
+    {
+      body: userCreateBody,
       beforeHandle({ user }) {
         if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
         if (user.role !== 'admin') return jsonError('Forbidden', 'FORBIDDEN', 403);
@@ -533,12 +582,14 @@ const app = new Elysia({ prefix: '/api' })
       const segments = us.map((u) => {
         const userTodos = ts.filter((t) => t.userId === u.id);
         const completed = userTodos.filter((t) => t.completed).length;
-        const impact =
-          userTodos.reduce((s, t) => s + (t.priority || 0) + (t.storyPoints || 0), 0);
+        const total = userTodos.length;
+        const impact = userTodos
+          .filter((t) => t.completed)
+          .reduce((s, t) => s + (t.priority || 0) * 10, 0);
         let segment = 'Newbie';
-        if (completed > 2) segment = 'Power User';
+        if (completed > 2 && impact > 50) segment = 'Power User';
         else if (completed > 0) segment = 'Active';
-        else if (userTodos.length > 2) segment = 'At Risk';
+        else if (total > 2) segment = 'At Risk (ดองงาน)';
         return {
           userId: u.id,
           email: u.email,
@@ -546,6 +597,7 @@ const app = new Elysia({ prefix: '/api' })
           lastLoginAt: u.lastLoginAt,
           recency: u.lastLoginAt,
           frequency: completed,
+          total,
           impact,
           segment,
         };
@@ -567,7 +619,18 @@ const app = new Elysia({ prefix: '/api' })
           ? jsonError('Forbidden', 'FORBIDDEN', 403)
           : jsonError('Unauthorized', 'UNAUTHORIZED', 401);
       }
-      const ws = await db.select().from(workspaces);
+      let ws = await db.select().from(workspaces);
+      if (ws.length === 0) {
+        const defaults = [
+          'Frontend Unit',
+          'Backend Unit',
+          'Marketing Team',
+          'Management',
+          'Personal',
+        ];
+        await db.insert(workspaces).values(defaults.map((name) => ({ name })));
+        ws = await db.select().from(workspaces);
+      }
       const ts = await db.select().from(todos);
       const performance = ws.map((w) => {
         const wsTodos = ts.filter((t) => t.workspaceId === w.id);
@@ -579,6 +642,15 @@ const app = new Elysia({ prefix: '/api' })
           completed,
         };
       });
+      const unassigned = ts.filter((t) => !t.workspaceId);
+      if (unassigned.length > 0) {
+        performance.push({
+          workspaceId: '_unassigned',
+          name: 'ไม่ระบุ (Unassigned)',
+          total: unassigned.length,
+          completed: unassigned.filter((t) => t.completed).length,
+        });
+      }
       const heatmap: Record<string, number> = {};
       ts.forEach((t) => {
         if (t.updatedAt) {
@@ -602,14 +674,12 @@ const app = new Elysia({ prefix: '/api' })
     '/workspaces',
     async ({ db, user }) => {
       if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
-      if (user.role !== 'admin') return jsonError('Forbidden', 'FORBIDDEN', 403);
       const items = await db.select().from(workspaces);
       return { items };
     },
     {
       beforeHandle({ user }) {
         if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
-        if (user.role !== 'admin') return jsonError('Forbidden', 'FORBIDDEN', 403);
       },
     }
   )
