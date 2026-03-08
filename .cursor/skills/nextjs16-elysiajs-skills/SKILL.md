@@ -1,235 +1,511 @@
 ---
 name: nextjs16-elysiajs-skills
-description: Next.js 16 + ElysiaJS + shadcn/ui + Tailwind v4 + Drizzle ORM + Docker. Use when building with Elysia, Eden, shadcn, Tailwind, Drizzle, or Docker.
+description: Next.js 16 + ElysiaJS + shadcn/ui + Tailwind v4 + Drizzle ORM + JWT Auth + Docker. Use when building with Elysia, Eden, shadcn, Tailwind, Drizzle, auth, or Docker.
 ---
 
 # Next.js 16 + ElysiaJS Skills
 
-Full-stack skill combining ElysiaJS integration with Next.js 16 best practices. Structure follows [vercel-labs/next-skills](https://github.com/vercel-labs/next-skills).
+Full-stack skill combining ElysiaJS integration with Next.js 16, JWT auth, Drizzle ORM, shadcn/ui, and production-ready patterns. ใช้เมื่อสร้างโปรเจคใหม่หรือต่อยอดจากโครงสร้างนี้
 
 ---
 
-## Elysia Integration (Primary)
+## Quick Start (โปรเจคใหม่)
 
-Run Elysia inside Next.js App Router. See [references/elysia-integration.md](./references/elysia-integration.md) for full details.
+```bash
+# 1. Create Next.js 16 project
+bunx create-next-app@latest my-app --typescript --tailwind --app --src-dir=false
 
-### Quick Setup
+# 2. Add core deps
+bun add elysia @elysiajs/eden drizzle-orm postgres drizzle-typebox bcrypt jose
+bun add @sinclair/typebox openapi-types
+bun add -D drizzle-kit @types/bcrypt
+
+# 3. Add UI & state
+bunx shadcn@latest init
+bun add @tanstack/react-query next-themes sonner
+```
+
+See [references/project-scaffold.md](./references/project-scaffold.md) for full scaffold.
+
+---
+
+## Project Structure (โครงสร้างที่แนะนำ)
+
+```
+app/
+├── (auth)/                    # Route group: login, register
+│   ├── login/page.tsx
+│   └── register/page.tsx
+├── (dashboard)/               # Protected: หลัง login
+│   ├── layout.tsx             # Sidebar, Header, useUser
+│   ├── admin/users/page.tsx   # Admin only
+│   └── dashboard/
+│       ├── todos/page.tsx
+│       ├── overview/page.tsx
+│       └── ...
+├── api/[[...slugs]]/
+│   └── route.ts               # Elysia server (export GET/POST/PATCH/DELETE)
+├── layout.tsx
+├── page.tsx
+└── providers.tsx              # QueryClientProvider, ThemeProvider, Toaster
+
+lib/
+├── db.ts                      # Drizzle client
+├── schema.ts                  # Drizzle tables, relations
+├── auth.ts                    # JWT (jose), bcrypt
+├── api-auth-plugin.ts         # Elysia auth plugin (derive user from cookie/token)
+├── eden.ts                    # Eden Treaty client
+├── constants.ts               # JWT_EXPIRY, USER_ROLE, etc.
+└── hooks/
+    └── use-user.ts            # useQuery + api.users.me.get
+
+components/
+├── ui/                        # shadcn components
+├── layout/sidebar.tsx
+├── search-bar.tsx
+├── profile-modal.tsx
+└── theme-toggle.tsx
+
+proxy.ts                       # Next 16: route protection (redirect guest → /login)
+drizzle/
+docker-compose.dev.yml         # PostgreSQL for dev
+```
+
+---
+
+## Elysia Integration
+
+### Route Setup
 
 ```typescript
 // app/api/[[...slugs]]/route.ts
-import { Elysia, t } from 'elysia'
+import { Elysia, t } from 'elysia';
+import { db } from '@/lib/db';
+import { authPlugin } from '@/lib/api-auth-plugin';
 
-export const app = new Elysia({ prefix: '/api' })
-  .get('/', 'Hello Nextjs')
-  .post('/user', ({ body }) => body, {
-    body: t.Object({ name: t.String() })
-  })
+const app = new Elysia({ prefix: '/api' })
+  .use(authPlugin)
+  .decorate('db', db)
+  .get('/', () => ({ message: 'API' }))
+  .post('/auth/login', handler, { body: loginBody })
+  .get('/users/me', handler, { beforeHandle: checkAuth });
 
-export const GET = app.fetch
-export const POST = app.fetch
+export type App = typeof app;
+export const GET = app.fetch;
+export const POST = app.fetch;
+export const PATCH = app.fetch;
+export const DELETE = app.fetch;
 ```
 
-### Eden Treaty (Isomorphic)
+**Rule:** `prefix: '/api'` ต้องตรงกับ path `app/api/` — ใช้ `[[...slugs]]` เพื่อ catch-all
+
+### Auth Plugin
 
 ```typescript
-// lib/eden.ts
-import { treaty } from '@elysiajs/eden'
-import type { app } from '@/app/api/[[...slugs]]/route'
+// lib/api-auth-plugin.ts
+import { Elysia } from 'elysia';
+import { verifyJWT, type JwtPayload } from './auth';
 
-export const api =
-  typeof process !== 'undefined'
-    ? treaty(app).api
-    : treaty<typeof app>(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000').api
+const AUTH_COOKIE = 'auth_token';
+
+function getTokenFromRequest(request: Request): string | null {
+  const authHeader = request.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) return authHeader.slice(7);
+  const match = (request.headers.get('Cookie') || '').match(
+    new RegExp(`${AUTH_COOKIE}=([^;]+)`)
+  );
+  return match ? match[1] : null;
+}
+
+export const authPlugin = new Elysia({ name: 'auth' })
+  .derive({ as: 'scoped' }, async ({ request }) => {
+    const token = getTokenFromRequest(request);
+    if (!token) return { user: null as JwtPayload | null };
+    const payload = await verifyJWT(token);
+    return { user: payload };
+  });
+
+export { AUTH_COOKIE };
 ```
 
-Use `typeof process` not `typeof window` (hydration errors).
+ใช้ `beforeHandle` สำหรับ protected routes:
 
-### Key Rules
-
-| Rule | Detail |
-|------|--------|
-| prefix matches path | `app/api/` → `prefix: '/api'` |
-| Export each method | `export const GET = app.fetch` |
-| bun | `bun add @sinclair/typebox openapi-types` |
-
----
-
-## Essential Next.js Topics
-
-### File Conventions
-
-See [references/file-conventions.md](./references/file-conventions.md):
-- Project structure and special files
-- Route segments (dynamic, catch-all, `[[...slugs]]` for Elysia)
-- Middleware vs proxy (v16: `proxy.ts`)
-
-### Async Patterns
-
-See [references/async-patterns.md](./references/async-patterns.md):
-- `params` and `searchParams` as `Promise<...>`
-- `await cookies()`, `await headers()`
-- Migration codemod
-
-### Route Handlers
-
-See [references/route-handlers.md](./references/route-handlers.md):
-- `route.ts` basics
-- Elysia compatibility with `app.fetch`
-- Conflict with `page.tsx`
-- When to use vs Server Actions
-
-### RSC Boundaries
-
-See [references/rsc-boundaries.md](./references/rsc-boundaries.md):
-- Async client components invalid
-- Serializable props
-- Server Action exceptions
-
-### Data Patterns
-
-See [references/data-patterns.md](./references/data-patterns.md):
-- Server Components vs Server Actions vs Route Handlers
-- Eden with Server/Client Components
-- Avoiding waterfalls
-
-### Directives
-
-See [references/directives.md](./references/directives.md):
-- `'use client'`, `'use server'`, `'use cache'`
-
-### Error Handling
-
-See [references/error-handling.md](./references/error-handling.md):
-- `error.tsx`, `not-found.tsx`, `redirect()`, `notFound()`
-
-### Metadata
-
-See [references/metadata.md](./references/metadata.md):
-- Static and dynamic metadata
-- OG images
-
----
-
-## Tailwind CSS v4 + shadcn/ui
-
-See [references/tailwind-v4.md](./references/tailwind-v4.md):
-- Tailwind v4 install (PostCSS / Vite)
-- `@theme inline` for shadcn variables
-- OKLCH colors, new-york style
-- Upgrade from v3
-
-See [references/shadcn.md](./references/shadcn.md):
-- Project context via `shadcn info --json`
-- CLI: init, add, search, view, docs, info
-- Pattern enforcement: FieldGroup, compound components, semantic colors
-- Theming: CSS variables, OKLCH, dark mode
-- MCP Server for component discovery
-
-### Quick Setup
-
-```bash
-bunx shadcn@latest init
-bunx shadcn@latest add button card input form table dialog
+```typescript
+.get('/users/me', handler, {
+  beforeHandle({ user }) {
+    if (!user) return jsonError('Unauthorized', 'UNAUTHORIZED', 401);
+  },
+})
 ```
 
-### With Eden (Forms)
+### Validation (t)
 
-```tsx
-// Form submits to Elysia via Eden
-const onSubmit = async (data) => {
-  const { error } = await api.user.post(data)
-  if (error) toast.error('Failed')
+```typescript
+const loginBody = t.Object({
+  email: t.String({ format: 'email' }),
+  password: t.String(),
+});
+
+const todoCreateBody = t.Object({
+  title: t.String(),
+  description: t.Optional(t.String()),
+  completed: t.Optional(t.Boolean()),
+  dueDate: t.Optional(t.Union([t.String(), t.Null()])),
+});
+```
+
+### Error Response Helper
+
+```typescript
+function jsonError(message: string, code: string, status: number) {
+  return new Response(JSON.stringify({ error: message, code }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 ```
 
 ---
 
-## Docker Compose
+## Eden Treaty
 
-See [references/docker-compose.md](./references/docker-compose.md):
-- dev: PostgreSQL only (`docker compose up -d`)
-- full: app + DB
-- Docker MCP Toolkit for AI agent workflow
+```typescript
+// lib/eden.ts
+import { treaty } from '@elysiajs/eden';
+import type { App } from '@/app/api/[[...slugs]]/route';
+
+function getBaseUrl(): string {
+  if (typeof window !== 'undefined' && typeof location !== 'undefined') {
+    return location.origin;
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+}
+
+export const api = treaty<App>(getBaseUrl()).api;
+```
+
+**Usage (Client):**
+
+```tsx
+// lib/hooks/use-user.ts
+'use client';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/eden';
+
+export function useUser() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['user', 'me'],
+    queryFn: async () => {
+      const res = await api.users.me.get();
+      if (res.error) throw new Error(res.error.error || 'Failed');
+      return res.data;
+    },
+    retry: false,
+  });
+  return { user: data, isLoading };
+}
+```
+
+---
+
+## Auth (JWT + bcrypt)
+
+```typescript
+// lib/auth.ts
+import { SignJWT, jwtVerify } from 'jose';
+import * as bcrypt from 'bcrypt';
+
+const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret');
+const SALT_ROUNDS = 10;
+
+export async function hashPassword(password: string) {
+  return bcrypt.hash(password, SALT_ROUNDS);
+}
+
+export async function verifyPassword(password: string, hash: string) {
+  return bcrypt.compare(password, hash);
+}
+
+export async function createJWT(userId: string, role: string) {
+  return new SignJWT({ role })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(userId)
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(secret);
+}
+
+export async function verifyJWT(token: string) {
+  const { payload } = await jwtVerify(token, secret);
+  return { sub: payload.sub, role: payload.role };
+}
+```
+
+**Login Response + Cookie:**
+
+```typescript
+function setAuthCookie(response: Response, token: string) {
+  const isProd = process.env.NODE_ENV === 'production';
+  const headers = new Headers(response.headers);
+  headers.append(
+    'Set-Cookie',
+    `auth_token=${token}; Path=/; HttpOnly; SameSite=Lax${isProd ? '; Secure' : ''}; Max-Age=${7 * 24 * 60 * 60}`
+  );
+  return new Response(response.body, { status: response.status, headers });
+}
+```
+
+---
+
+## Proxy (Next 16 Route Protection)
+
+Next 16 ใช้ `proxy.ts` แทน `middleware.ts` — export `proxy()` และ `config`:
+
+```typescript
+// proxy.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
+
+const AUTH_COOKIE = 'auth_token';
+
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname === '/') {
+    const token = request.cookies.get(AUTH_COOKIE)?.value;
+    if (token) {
+      try {
+        await jwtVerify(token, secret);
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      } catch {}
+    }
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  if (pathname === '/login' || pathname === '/register') {
+    const token = request.cookies.get(AUTH_COOKIE)?.value;
+    if (token) {
+      try {
+        await jwtVerify(token, secret);
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      } catch {}
+    }
+    return NextResponse.next();
+  }
+
+  // Protected
+  const token = request.cookies.get(AUTH_COOKIE)?.value;
+  if (!token) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('from', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+};
+```
 
 ---
 
 ## Drizzle ORM
 
-See [references/drizzle.md](./references/drizzle.md):
-- Install: `bun add drizzle-orm postgres drizzle-typebox`
-- drizzle-typebox: reuse schema as Elysia validation
-- Queries: select, insert, update, delete
-- Migrations: `bunx drizzle-kit generate/migrate`
+```typescript
+// lib/db.ts
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from './schema';
 
-### Quick with Elysia
+const client = postgres(process.env.DATABASE_URL!);
+export const db = drizzle({ client, schema });
+```
 
 ```typescript
-const _createUser = createInsertSchema(user)
-// Use t.Omit to exclude auto-generated fields
-.post('/user', handler, { body: t.Omit(_createUser, ['id', 'createdAt']) })
+// lib/schema.ts
+import { pgTable, uuid, varchar, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+
+export const userRoleEnum = pgEnum('user_role', ['admin', 'user']);
+
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }),
+  role: userRoleEnum('role').notNull().default('user'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+```
+
+**drizzle-typebox (optional):** ใช้ `createInsertSchema` เพื่อ reuse schema เป็น Elysia body validation — ดู [references/drizzle.md](./references/drizzle.md)
+
+---
+
+## shadcn/ui + Tailwind v4
+
+```bash
+bunx shadcn@latest init
+bunx shadcn@latest add button card input form table dialog avatar badge dropdown-menu sheet sonner
+```
+
+`components.json` ใช้ style `base-nova`, `rsc: true`, `tailwind.css: app/globals.css`
+
+---
+
+## Providers
+
+```tsx
+// app/providers.tsx
+'use client';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
+import { Toaster } from '@/components/ui/sonner';
+import { useState } from 'react';
+
+export function Providers({ children }) {
+  const [queryClient] = useState(
+    () => new QueryClient({
+      defaultOptions: { queries: { staleTime: 60 * 1000 } },
+    })
+  );
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="system">
+        {children}
+        <Toaster position="top-right" />
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
 ```
 
 ---
 
-## Advanced Use Cases
+## Docker (Dev DB)
 
-### next-upgrade
+```yaml
+# docker-compose.dev.yml
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
 
-See [references/next-upgrade.md](./references/next-upgrade.md):
-- Version detection
-- Codemods
-- Migration guides
+volumes:
+  postgres_data:
+```
 
-### next-cache-components
-
-See [references/next-cache-components.md](./references/next-cache-components.md):
-- `cacheComponents: true`
-- `'use cache'`, `cacheLife()`, `cacheTag()`
-- PPR patterns
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
 
 ---
 
-## Project Structure
+## Scripts (package.json)
 
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "bun run scripts/seed-workspaces.ts"
+  }
+}
 ```
-app/
-├── api/[[...slugs]]/route.ts   # Elysia server
-├── layout.tsx
-├── page.tsx
-├── components/
-│   └── ui/                     # shadcn components (from components.json)
-└── providers.tsx               # ThemeProvider etc.
 
-lib/
-├── eden.ts                     # Eden Treaty client
-├── db.ts                       # Drizzle client
-└── schema.ts                   # Drizzle schema
+---
 
-drizzle/                        # Migrations
-docker-compose.yml              # DB (or full stack)
-components.json                 # shadcn config (triggers skill)
-references/                     # Skill reference docs
-├── elysia-integration.md
-├── file-conventions.md
-├── async-patterns.md
-├── route-handlers.md
-├── next-upgrade.md
-├── next-cache-components.md
-└── ...
-```
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Secret for signing JWT (use long random in prod) |
+| `NEXT_PUBLIC_API_URL` | API base URL for client (default: http://localhost:3000) |
+
+---
+
+## Essential Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `elysia` | Backend framework |
+| `@elysiajs/eden` | Type-safe API client |
+| `drizzle-orm` | ORM |
+| `postgres` | PostgreSQL driver (serverless-friendly) |
+| `drizzle-typebox` | Drizzle → Elysia schema |
+| `bcrypt` | Password hashing |
+| `jose` | JWT sign/verify |
+| `@tanstack/react-query` | Data fetching |
+| `next-themes` | Dark mode |
+| `sonner` | Toast notifications |
+
+---
+
+## File Conventions (Next 16)
+
+| Pattern | Use |
+|---------|-----|
+| `[[...slugs]]` | Elysia catch-all route |
+| `(auth)` | Route group — no URL segment |
+| `proxy.ts` | Next 16 route guard (replaces middleware) |
+
+See [references/file-conventions.md](./references/file-conventions.md).
 
 ---
 
 ## References
 
+| Topic | File |
+|-------|------|
+| Project scaffold | [project-scaffold.md](./references/project-scaffold.md) |
+| Elysia integration | [elysia-integration.md](./references/elysia-integration.md) |
+| Drizzle | [drizzle.md](./references/drizzle.md) |
+| Docker | [docker-compose.md](./references/docker-compose.md) |
+| File conventions | [file-conventions.md](./references/file-conventions.md) |
+| Async patterns | [async-patterns.md](./references/async-patterns.md) |
+| Tailwind v4 | [tailwind-v4.md](./references/tailwind-v4.md) |
+| shadcn | [shadcn.md](./references/shadcn.md) |
+| Error handling | [error-handling.md](./references/error-handling.md) |
+| Metadata | [metadata.md](./references/metadata.md) |
+| Route handlers | [route-handlers.md](./references/route-handlers.md) |
+| RSC boundaries | [rsc-boundaries.md](./references/rsc-boundaries.md) |
+| Data patterns | [data-patterns.md](./references/data-patterns.md) |
+| Directives | [directives.md](./references/directives.md) |
+| next-upgrade | [next-upgrade.md](./references/next-upgrade.md) |
+| next-cache-components | [next-cache-components.md](./references/next-cache-components.md) |
+
+---
+
+## External Links
+
 - [ElysiaJS Next.js Integration](https://elysiajs.com/integrations/nextjs)
+- [Eden Treaty](https://elysiajs.com/eden/overview)
+- [Drizzle ORM](https://orm.drizzle.team/docs)
+- [shadcn/ui](https://ui.shadcn.com)
 - [vercel-labs/next-skills](https://github.com/vercel-labs/next-skills)
 - [Tailwind v4](https://tailwindcss.com/docs)
-- [shadcn Tailwind v4](https://ui.shadcn.com/docs/tailwind-v4)
-- [shadcn/ui Skills](https://ui.shadcn.com/docs/skills)
-- [shadcn/ui CLI](https://ui.shadcn.com/docs/cli)
-- [Drizzle ORM Guides](https://orm.drizzle.team/docs/guides)
-- [Elysia + Drizzle](https://elysiajs.com/integrations/drizzle)
-- [Docker MCP Catalog & Toolkit](https://docs.docker.com/ai/mcp-catalog-and-toolkit/)
-- [Next.js Route Handlers](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)
-- [Eden Treaty](https://elysiajs.com/eden/overview)
