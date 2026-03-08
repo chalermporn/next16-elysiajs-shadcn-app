@@ -1,5 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { mkdir, writeFile } from 'fs/promises';
+import path from 'path';
 import { db } from '@/lib/db';
 import { users, todos, workspaces } from '@/lib/schema';
 import {
@@ -50,6 +52,7 @@ const userUpdateBody = t.Partial(
   t.Object({
     name: t.String(),
     role: t.Union([t.Literal('admin'), t.Literal('user')]),
+    avatar: t.Optional(t.String()), // base64 data URL
   })
 );
 
@@ -186,6 +189,7 @@ const app = new Elysia({ prefix: '/api' })
           id: users.id,
           email: users.email,
           name: users.name,
+          avatarUrl: users.avatarUrl,
           role: users.role,
           lastLoginAt: users.lastLoginAt,
           createdAt: users.createdAt,
@@ -235,6 +239,7 @@ const app = new Elysia({ prefix: '/api' })
           id: users.id,
           email: users.email,
           name: users.name,
+          avatarUrl: users.avatarUrl,
           role: users.role,
           lastLoginAt: users.lastLoginAt,
           createdAt: users.createdAt,
@@ -260,6 +265,7 @@ const app = new Elysia({ prefix: '/api' })
           id: users.id,
           email: users.email,
           name: users.name,
+          avatarUrl: users.avatarUrl,
           role: users.role,
           lastLoginAt: users.lastLoginAt,
           createdAt: users.createdAt,
@@ -289,6 +295,7 @@ const app = new Elysia({ prefix: '/api' })
           id: users.id,
           email: users.email,
           name: users.name,
+          avatarUrl: users.avatarUrl,
           role: users.role,
           lastLoginAt: users.lastLoginAt,
           createdAt: users.createdAt,
@@ -320,6 +327,24 @@ const app = new Elysia({ prefix: '/api' })
       const update: Record<string, unknown> = { updatedAt: new Date() };
       if (body.name !== undefined) update.name = body.name;
       if (body.role !== undefined && user.role === 'admin') update.role = body.role;
+      if (body.avatar !== undefined && params.id === user.sub) {
+        const dataUrl = body.avatar as string;
+        const match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+        if (match) {
+          const ext = match[1] === 'png' ? 'png' : 'jpeg';
+          const base64 = match[2];
+          try {
+            const dir = path.join(process.cwd(), 'public', 'avatars');
+            await mkdir(dir, { recursive: true });
+            const filePath = path.join(dir, `${params.id}.${ext}`);
+            const buf = Buffer.from(base64, 'base64');
+            await writeFile(filePath, buf);
+            update.avatarUrl = `/avatars/${params.id}.${ext}`;
+          } catch {
+            // Ignore file write errors (e.g. read-only fs on serverless)
+          }
+        }
+      }
       const [u] = await db
         .update(users)
         .set(update as typeof users.$inferInsert)
@@ -328,6 +353,7 @@ const app = new Elysia({ prefix: '/api' })
           id: users.id,
           email: users.email,
           name: users.name,
+          avatarUrl: users.avatarUrl,
           role: users.role,
           lastLoginAt: users.lastLoginAt,
           createdAt: users.createdAt,

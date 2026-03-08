@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import { Search, Bell } from 'lucide-react';
 import { Sidebar, SidebarToggle } from '@/components/layout/sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { ProfileModal } from '@/components/profile-modal';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useUser } from '@/lib/hooks/use-user';
 
 const titles: Record<string, string> = {
@@ -22,6 +24,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const { user, isLoading } = useUser();
 
   if (isLoading || !user) {
@@ -34,7 +37,8 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 overflow-hidden">
-      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onProfileClick={() => setProfileOpen(true)} />
+      <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} user={user} />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <header className="md:hidden bg-background/80 dark:bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
@@ -45,9 +49,20 @@ export default function DashboardLayout({
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle className="text-foreground/70" />
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-              {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-            </div>
+            <button
+              type="button"
+              onClick={() => setProfileOpen(true)}
+              className="flex items-center justify-center rounded-full overflow-hidden ring-2 ring-transparent hover:ring-primary/30 transition-all"
+            >
+              <Avatar className="size-8">
+                {user.avatarUrl ? (
+                  <AvatarImage src={user.avatarUrl} alt={user.name ?? user.email} />
+                ) : null}
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
+                  {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </button>
           </div>
         </header>
         <header className="hidden md:flex bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-b border-slate-200/60 dark:border-slate-700/60 px-8 py-5 items-center justify-between sticky top-0 z-10">
@@ -71,6 +86,20 @@ export default function DashboardLayout({
             <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-full transition-colors relative">
               <Bell size={20} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full border-2 border-white dark:border-slate-900" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setProfileOpen(true)}
+              className="flex items-center justify-center rounded-full overflow-hidden ring-2 ring-transparent hover:ring-primary/30 transition-all"
+            >
+              <Avatar className="size-9">
+                {user.avatarUrl ? (
+                  <AvatarImage src={user.avatarUrl} alt={user.name ?? user.email} />
+                ) : null}
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
+                  {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
             </button>
             <ThemeToggle />
           </div>

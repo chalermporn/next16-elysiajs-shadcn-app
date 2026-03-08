@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/eden';
 
 const CATEGORIES = ['Production', 'Marketing', 'Admin'];
-const DAYS = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
+const DAY_NAMES = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']; // Sun=0, Mon=1, ...
 
 export default function OverviewPage() {
   const { data, isLoading } = useQuery({
@@ -40,15 +40,17 @@ export default function OverviewPage() {
     total === 0 ? 0 : ((byCategory[cat] || 0) / total) * 100;
   const pieGradient = `conic-gradient(#2563eb 0% ${getPercent('Production')}%, #f59e0b ${getPercent('Production')}% ${getPercent('Production') + getPercent('Marketing')}%, #94a3b8 ${getPercent('Production') + getPercent('Marketing')}% 100%)`;
 
-  // Bar chart: last 7 days from trendByDay, or fixed demo values
+  // Bar chart: 7 วันล่าสุด จาก trendByDay (จำนวนงานที่ทำเสร็จแต่ละวัน)
   const trendByDay = d?.trendByDay ?? {};
-  const barHeights = DAYS.map((_, i) => {
+  const barData = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - i));
     const key = date.toISOString().slice(0, 10);
-    const val = trendByDay[key];
-    return typeof val === 'number' ? val : [40, 60, 45, 80, 50, 90, 30][i];
+    const count = typeof trendByDay[key] === 'number' ? trendByDay[key] : 0;
+    const label = DAY_NAMES[date.getDay()];
+    return { label, count, dateKey: key };
   });
+  const barHeights = barData.map((b) => b.count);
   const maxBar = Math.max(...barHeights, 1);
 
   return (
@@ -147,23 +149,23 @@ export default function OverviewPage() {
               <div className="border-t border-slate-100 dark:border-slate-700 w-full h-0" />
               <div className="border-t border-slate-100 dark:border-slate-700 w-full h-0" />
             </div>
-            {barHeights.map((h, i) => (
+            {barData.map((bar, i) => (
               <div
-                key={i}
+                key={bar.dateKey}
                 className="w-full flex flex-col items-center gap-3 relative z-10 group h-full justify-end"
               >
                 <div className="w-full max-w-[48px] bg-blue-50 dark:bg-blue-950/50 rounded-t-lg relative h-full flex items-end">
                   <div
-                    className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-lg transition-all duration-500 group-hover:from-blue-700 group-hover:to-blue-500 shadow-sm"
-                    style={{ height: `${(h / maxBar) * 100}%` }}
+                    className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-lg transition-all duration-500 group-hover:from-blue-700 group-hover:to-blue-500 shadow-sm min-h-[2px]"
+                    style={{ height: maxBar > 0 ? `${(bar.count / maxBar) * 100}%` : '0%' }}
                   >
-                    <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded font-bold transition-opacity">
-                      {h}
+                    <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded font-bold transition-opacity whitespace-nowrap z-20">
+                      {bar.count} งาน
                     </div>
                   </div>
                 </div>
                 <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
-                  {DAYS[i]}
+                  {bar.label}
                 </span>
               </div>
             ))}

@@ -14,6 +14,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useUser } from '@/lib/hooks/use-user';
 import { api } from '@/lib/eden';
 import { cn } from '@/lib/utils';
@@ -29,9 +30,11 @@ const navItems = [
 export function Sidebar({
   isOpen,
   setIsOpen,
+  onProfileClick,
 }: {
   isOpen: boolean;
   setIsOpen: (v: boolean) => void;
+  onProfileClick?: () => void;
 }) {
   const pathname = usePathname();
   const { user } = useUser();
@@ -84,11 +87,23 @@ export function Sidebar({
         </div>
 
         <div className="px-4 mb-8">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-900 border border-slate-700/50 relative overflow-hidden">
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              onProfileClick?.();
+            }}
+            className="w-full text-left p-4 rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-900 border border-slate-700/50 relative overflow-hidden hover:border-slate-600/80 transition-colors"
+          >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-700 border-2 border-slate-600 flex items-center justify-center font-bold text-white">
-                {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-              </div>
+              <Avatar className="size-10 shrink-0 border-2 border-slate-600">
+                {user.avatarUrl ? (
+                  <AvatarImage src={user.avatarUrl} alt={user.name ?? user.email} />
+                ) : null}
+                <AvatarFallback className="bg-slate-700 text-white font-bold">
+                  {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white truncate">
                   {user.name || user.email}
@@ -108,7 +123,7 @@ export function Sidebar({
                 </div>
               </div>
             </div>
-          </div>
+          </button>
         </div>
 
         <div className="px-3 mb-2 text-xs font-semibold text-slate-500 uppercase">
