@@ -27,8 +27,24 @@ export default function RegisterPage() {
     setLoading(false);
 
     if (res.error) {
-      const err = res.error as { error?: string; message?: string };
-      setError(err.error || err.message || 'อีเมลนี้มีผู้ใช้งานแล้ว');
+      const err = res.error as { value?: Record<string, unknown>; error?: string; message?: string } | string | undefined;
+      let msg = 'อีเมลนี้มีผู้ใช้งานแล้ว';
+      if (typeof err === 'string') {
+        try {
+          const parsed = JSON.parse(err) as Record<string, unknown>;
+          msg = (parsed.error as string) || (parsed.message as string) || msg;
+        } catch {
+          msg = err;
+        }
+      } else if (err && typeof err === 'object' && err !== null) {
+        const body = err.value || err;
+        const o = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>) : null;
+        if (o && typeof o.error === 'string') msg = o.error;
+        else if (o && typeof o.message === 'string') msg = o.message;
+        else if (typeof err.error === 'string') msg = err.error;
+        else if (typeof err.message === 'string') msg = err.message;
+      }
+      setError(String(msg));
       return;
     }
     alert('สมัครสมาชิกสำเร็จ! กรุณาล็อกอิน');

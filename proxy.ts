@@ -7,7 +7,7 @@ const secret = new TextEncoder().encode(
   process.env.JWT_SECRET || 'dev-secret-change-in-production'
 );
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Root redirect

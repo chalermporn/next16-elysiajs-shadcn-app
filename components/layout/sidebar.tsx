@@ -158,10 +158,9 @@ export function Sidebar({
         <div className="p-4 mt-auto border-t border-slate-800/80">
           <Button
             variant="ghost"
-            className="w-full justify-start text-slate-400 hover:bg-red-500/10 hover:text-red-400"
+            className="w-full justify-start gap-3 text-slate-400 hover:bg-red-500/10 hover:text-red-400"
             onClick={logout}
           >
-            <LogOut size={20} className="mr-3" />
             ออกจากระบบ
           </Button>
         </div>
