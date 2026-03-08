@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, or, desc, ilike } from 'drizzle-orm';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { db } from '@/lib/db';
@@ -416,6 +416,16 @@ const app = new Elysia({ prefix: '/api' })
       if (query?.completed !== undefined) {
         conditions.push(eq(todos.completed, query.completed === 'true'));
       }
+      const q = typeof query?.q === 'string' ? query.q.trim() : '';
+      if (q.length > 0) {
+        const pattern = `%${q}%`;
+        conditions.push(
+          or(
+            ilike(todos.title, pattern),
+            ilike(todos.description, pattern)
+          )!
+        );
+      }
       const whereClause =
         conditions.length > 0 ? and(...conditions) : undefined;
       const items = await db
@@ -430,6 +440,7 @@ const app = new Elysia({ prefix: '/api' })
         t.Object({
           userId: t.Optional(t.String()),
           completed: t.Optional(t.String()),
+          q: t.Optional(t.String()),
         })
       ),
       beforeHandle: ({ user }) => {

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Search, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
+import { SearchBar } from '@/components/search-bar';
 import { Sidebar, SidebarToggle } from '@/components/layout/sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ProfileModal } from '@/components/profile-modal';
@@ -40,12 +41,15 @@ export default function DashboardLayout({
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onProfileClick={() => setProfileOpen(true)} />
       <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} user={user} />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <header className="md:hidden bg-background/80 dark:bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-3">
+        <header className="md:hidden bg-background/80 dark:bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-30">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <SidebarToggle onClick={() => setSidebarOpen(true)} />
-            <h1 className="text-lg font-bold text-foreground">
+            <h1 className="text-lg font-bold text-foreground truncate">
               {titles[pathname] || 'TodoFlow'}
             </h1>
+          </div>
+          <div className="lg:hidden shrink-0">
+            <SearchBar />
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle className="text-foreground/70" />
@@ -75,13 +79,8 @@ export default function DashboardLayout({
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden lg:flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-full px-4 py-2 shadow-sm">
-              <Search size={16} className="text-slate-400 mr-2" />
-              <input
-                type="text"
-                placeholder="ค้นหา..."
-                className="bg-transparent text-sm outline-none w-48 text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
-              />
+            <div className="hidden lg:flex items-center">
+              <SearchBar />
             </div>
             <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-full transition-colors relative">
               <Bell size={20} />

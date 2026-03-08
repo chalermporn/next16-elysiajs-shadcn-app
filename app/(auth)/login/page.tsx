@@ -59,8 +59,10 @@ function LoginForm() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">อีเมล</label>
+              <label htmlFor="login-email" className="block text-sm font-semibold text-slate-700 mb-2">อีเมล</label>
               <Input
+                id="login-email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -69,8 +71,10 @@ function LoginForm() {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">รหัสผ่าน</label>
+              <label htmlFor="login-password" className="block text-sm font-semibold text-slate-700 mb-2">รหัสผ่าน</label>
               <Input
+                id="login-password"
+                name="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

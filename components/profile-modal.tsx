@@ -121,8 +121,10 @@ export function ProfileModal({ open, onOpenChange, user }: ProfileModalProps) {
               />
             </div>
             <div className="px-4 py-3 border-t border-border">
-              <label className="block text-sm font-medium mb-2">ซูม</label>
+              <label htmlFor="profile-zoom" className="block text-sm font-medium mb-2">ซูม</label>
               <input
+                id="profile-zoom"
+                name="zoom"
                 type="range"
                 min={1}
                 max={3}
@@ -167,6 +169,8 @@ export function ProfileModal({ open, onOpenChange, user }: ProfileModalProps) {
                   </Avatar>
                   <input
                     ref={fileInputRef}
+                    id="profile-avatar"
+                    name="avatar"
                     type="file"
                     accept="image/*"
                     className="hidden"
@@ -184,8 +188,10 @@ export function ProfileModal({ open, onOpenChange, user }: ProfileModalProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2">ชื่อ-นามสกุล</label>
+                <label htmlFor="profile-name" className="block text-sm font-semibold mb-2">ชื่อ-นามสกุล</label>
                 <Input
+                  id="profile-name"
+                  name="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="ชื่อของคุณ"
@@ -194,8 +200,8 @@ export function ProfileModal({ open, onOpenChange, user }: ProfileModalProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2">อีเมล</label>
-                <Input value={user.email} disabled className="min-h-[44px] opacity-70" />
+                <label htmlFor="profile-email" className="block text-sm font-semibold mb-2">อีเมล</label>
+                <Input id="profile-email" name="email" value={user.email} disabled className="min-h-[44px] opacity-70" />
                 <p className="text-xs text-muted-foreground mt-1">ไม่สามารถแก้ไขอีเมลได้</p>
               </div>
             </div>

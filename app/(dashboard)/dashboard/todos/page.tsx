@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   useQuery,
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
+import Link from 'next/link';
 import {
   CheckCircle2,
   Circle,
@@ -14,6 +16,7 @@ import {
   Edit,
   Save,
   Briefcase,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +47,8 @@ type TodoItem = {
 
 export default function TodosPage() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const q = searchParams.get('q') ?? '';
   const { user } = useUser();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [isAdding, setIsAdding] = useState(false);
@@ -70,9 +75,11 @@ export default function TodosPage() {
     : DEFAULT_WORKSPACES.map((name, i) => ({ id: `dummy-${i}`, name }));
 
   const { data, isLoading } = useQuery({
-    queryKey: ['todos'],
+    queryKey: ['todos', q || undefined],
     queryFn: async () => {
-      const res = await api.todos.get();
+      const res = await api.todos.get({
+        query: q ? { q } : undefined,
+      });
       if (res.error) throw new Error((res.error as { error?: string })?.error || 'Failed');
       return res.data;
     },
@@ -203,23 +210,37 @@ export default function TodosPage() {
   return (
     <div className="max-w-4xl mx-auto h-full flex flex-col relative">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sticky top-0 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md z-10 py-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:py-0">
-        <div className="flex bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-1 w-full sm:w-auto">
-          {(['all', 'active', 'completed'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => {
-                setFilter(f);
-                resetForm();
-              }}
-              className={`flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-lg text-sm font-semibold capitalize transition-all ${
-                filter === f
-                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              {f === 'all' ? 'งานทั้งหมด' : f === 'active' ? 'กำลังทำ' : 'เสร็จแล้ว'}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="flex bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-1">
+            {(['all', 'active', 'completed'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => {
+                  setFilter(f);
+                  resetForm();
+                }}
+                className={`flex-1 sm:flex-none px-4 py-2 sm:py-1.5 rounded-lg text-sm font-semibold capitalize transition-all ${
+                  filter === f
+                    ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                {f === 'all' ? 'งานทั้งหมด' : f === 'active' ? 'กำลังทำ' : 'เสร็จแล้ว'}
+              </button>
+            ))}
+          </div>
+          {q && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-sm">
+              <span>ค้นหา: {`"${q}"`}</span>
+              <Link
+                href="/dashboard/todos"
+                className="p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded"
+                aria-label="ล้างการค้นหา"
+              >
+                <X size={14} />
+              </Link>
+            </div>
+          )}
         </div>
         {!isAdding && !editingId && (
           <Button
@@ -260,6 +281,8 @@ export default function TodosPage() {
           <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
               <Input
+                id="todo-title"
+                name="title"
                 type="text"
                 placeholder="คุณต้องทำอะไรบ้าง?"
                 value={formData.title}
@@ -269,10 +292,12 @@ export default function TodosPage() {
               />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <label htmlFor="todo-category" className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     หมวดหมู่
                   </label>
                   <select
+                    id="todo-category"
+                    name="category"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="text-sm border-2 border-slate-200 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-800 outline-none focus:border-blue-500 min-h-[44px]"
@@ -285,10 +310,12 @@ export default function TodosPage() {
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <label htmlFor="todo-workspace" className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     ทีม / Workspace
                   </label>
                   <select
+                    id="todo-workspace"
+                    name="workspaceId"
                     value={formData.workspaceId || workspaceOptions[0]?.id}
                     onChange={(e) => setFormData({ ...formData, workspaceId: e.target.value })}
                     className="text-sm border-2 border-slate-200 dark:border-slate-600 rounded-xl p-3 bg-white dark:bg-slate-800 outline-none focus:border-blue-500 min-h-[44px]"
@@ -301,12 +328,14 @@ export default function TodosPage() {
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <label htmlFor="todo-priority" className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     ความสำคัญ{' '}
                     <span className="text-amber-600 dark:text-amber-400 font-bold">P{formData.priority}</span>
                   </label>
                   <div className="flex items-center h-[44px] px-2">
                     <input
+                      id="todo-priority"
+                      name="priority"
                       type="range"
                       min="1"
                       max="5"

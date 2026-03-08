@@ -47,8 +47,10 @@ export default function RegisterPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">ชื่อ-นามสกุล</label>
+            <label htmlFor="register-name" className="block text-sm font-semibold text-slate-700 mb-1">ชื่อ-นามสกุล</label>
             <Input
+              id="register-name"
+              name="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -57,8 +59,10 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">อีเมล</label>
+            <label htmlFor="register-email" className="block text-sm font-semibold text-slate-700 mb-1">อีเมล</label>
             <Input
+              id="register-email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -67,8 +71,10 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">รหัสผ่าน</label>
+            <label htmlFor="register-password" className="block text-sm font-semibold text-slate-700 mb-1">รหัสผ่าน</label>
             <Input
+              id="register-password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

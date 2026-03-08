@@ -371,8 +371,10 @@ export default function AdminUsersPage() {
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5">ชื่อ-นามสกุล</label>
+                  <label htmlFor="admin-create-name" className="block text-sm font-semibold mb-1.5">ชื่อ-นามสกุล</label>
                   <Input
+                    id="admin-create-name"
+                    name="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="min-h-[44px]"
@@ -380,8 +382,10 @@ export default function AdminUsersPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5">อีเมล</label>
+                  <label htmlFor="admin-create-email" className="block text-sm font-semibold mb-1.5">อีเมล</label>
                   <Input
+                    id="admin-create-email"
+                    name="email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -390,8 +394,10 @@ export default function AdminUsersPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5">รหัสผ่านชั่วคราว</label>
+                  <label htmlFor="admin-create-password" className="block text-sm font-semibold mb-1.5">รหัสผ่านชั่วคราว</label>
                   <Input
+                    id="admin-create-password"
+                    name="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="เช่น password123"
@@ -400,8 +406,10 @@ export default function AdminUsersPage() {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-semibold mb-1.5">สิทธิ์การใช้งาน (Role)</label>
+                  <label htmlFor="admin-create-role" className="block text-sm font-semibold mb-1.5">สิทธิ์การใช้งาน (Role)</label>
                   <select
+                    id="admin-create-role"
+                    name="role"
                     value={formData.role}
                     onChange={(e) =>
                       setFormData({ ...formData, role: e.target.value as 'admin' | 'user' })
@@ -443,21 +451,25 @@ export default function AdminUsersPage() {
               {editingUser && (
                 <>
                   <div>
-                    <label className="block text-sm font-semibold mb-1.5">อีเมล</label>
-                    <Input value={editingUser.email} disabled className="min-h-[44px] opacity-70" />
+                    <label htmlFor="admin-edit-email" className="block text-sm font-semibold mb-1.5">อีเมล</label>
+                    <Input id="admin-edit-email" name="email" value={editingUser.email} disabled className="min-h-[44px] opacity-70" />
                     <p className="text-xs text-muted-foreground mt-1">ไม่สามารถแก้ไขอีเมลได้</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-1.5">ชื่อ-นามสกุล</label>
+                    <label htmlFor="admin-edit-name" className="block text-sm font-semibold mb-1.5">ชื่อ-นามสกุล</label>
                     <Input
+                      id="admin-edit-name"
+                      name="name"
                       value={editFormData.name}
                       onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                       className="min-h-[44px]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-1.5">สิทธิ์การใช้งาน (Role)</label>
+                    <label htmlFor="admin-edit-role" className="block text-sm font-semibold mb-1.5">สิทธิ์การใช้งาน (Role)</label>
                     <select
+                      id="admin-edit-role"
+                      name="role"
                       value={editFormData.role}
                       onChange={(e) =>
                         setEditFormData({ ...editFormData, role: e.target.value as 'admin' | 'user' })
@@ -539,6 +551,8 @@ export default function AdminUsersPage() {
                   แสดง {start}-{end} จาก {total}
                 </span>
                 <select
+                  id="pagination-limit"
+                  name="limit"
                   value={limit}
                   onChange={(e) => {
                     setLimit(Number(e.target.value));
