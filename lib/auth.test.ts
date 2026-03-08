@@ -59,6 +59,31 @@ describe('auth', () => {
       expect(payload).toBeNull();
     });
 
+    it('returns null for token with missing sub', async () => {
+      const { SignJWT } = await import('jose');
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret-change-in-production');
+      const token = await new SignJWT({ role: 'admin' })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('7d')
+        .sign(secret);
+      const payload = await verifyJWT(token);
+      expect(payload).toBeNull();
+    });
+
+    it('returns null for token with non-string role', async () => {
+      const { SignJWT } = await import('jose');
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret-change-in-production');
+      const token = await new SignJWT({ role: 123 })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setSubject('user-1')
+        .setIssuedAt()
+        .setExpirationTime('7d')
+        .sign(secret);
+      const payload = await verifyJWT(token);
+      expect(payload).toBeNull();
+    });
+
     it('creates JWT for user role', async () => {
       const token = await createJWT('user-456', 'user');
       const payload = await verifyJWT(token);
