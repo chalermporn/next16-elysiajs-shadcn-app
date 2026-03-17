@@ -4,6 +4,7 @@ Next.js + ElysiaJS skill reference docs. Structure aligned with [vercel-labs/nex
 
 | File | Description |
 |------|-------------|
+| domain-adaptation.md | Adapting template to your domain (e-commerce, blog, CRM, SaaS) |
 | project-scaffold.md | New project setup: structure, deps, boilerplate |
 | elysia-integration.md | Elysia in Next.js, Eden Treaty, React Query |
 | file-conventions.md | Project structure, route segments, proxy |

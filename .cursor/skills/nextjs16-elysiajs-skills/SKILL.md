@@ -1,11 +1,28 @@
 ---
 name: nextjs16-elysiajs-skills
-description: Next.js 16 + ElysiaJS + shadcn/ui + Tailwind v4 + Drizzle ORM + JWT Auth + Docker. Use when building with Elysia, Eden, shadcn, Tailwind, Drizzle, auth, or Docker.
+description: Full-stack template for building ANY web app — Next.js 16 + ElysiaJS + shadcn/ui + Tailwind v4 + Drizzle ORM + JWT Auth + Docker. Use when: starting new web app, building SaaS, dashboard, e-commerce, blog, CRM, or full-stack app with Elysia, Eden, shadcn, Drizzle.
+triggers:
+  keywords:
+    - next.js 16
+    - elysia
+    - elysiajs
+    - shadcn
+    - full-stack template
+    - web app template
+    - create web app
+    - new project scaffold
+  file_patterns:
+    - "app/api/**/route.ts"
+    - "lib/eden.ts"
+    - "lib/schema.ts"
+    - "proxy.ts"
 ---
 
-# Next.js 16 + ElysiaJS Skills
+# Next.js 16 + ElysiaJS — Full-Stack Web App Template
 
-Full-stack skill combining ElysiaJS integration with Next.js 16, JWT auth, Drizzle ORM, shadcn/ui, and production-ready patterns. ใช้เมื่อสร้างโปรเจคใหม่หรือต่อยอดจากโครงสร้างนี้
+Universal full-stack template สำหรับสร้าง web app ทุกประเภท (SaaS, Dashboard, E-commerce, Blog, CRM, ฯลฯ) — Next.js 16, ElysiaJS, Eden Treaty, Drizzle ORM, JWT auth, shadcn/ui, Docker.
+
+**Use when:** สร้างโปรเจคใหม่ / สร้าง web app เรื่องอื่น / ขยายจากโครงสร้างนี้
 
 ---
 
@@ -38,10 +55,11 @@ app/
 │   └── register/page.tsx
 ├── (dashboard)/               # Protected: หลัง login
 │   ├── layout.tsx             # Sidebar, Header, useUser
-│   ├── admin/users/page.tsx   # Admin only
+│   ├── admin/users/page.tsx   # Admin only (ถ้าต้องการ)
 │   └── dashboard/
-│       ├── todos/page.tsx
-│       ├── overview/page.tsx
+│       ├── overview/page.tsx  # หน้าแรกหลัง login
+│       ├── [feature-1]/       # แทนด้วยโดเมนของคุณ เช่น products, posts, orders
+│       ├── [feature-2]/
 │       └── ...
 ├── api/[[...slugs]]/
 │   └── route.ts               # Elysia server (export GET/POST/PATCH/DELETE)
@@ -51,7 +69,7 @@ app/
 
 lib/
 ├── db.ts                      # Drizzle client
-├── schema.ts                  # Drizzle tables, relations
+├── schema.ts                  # Drizzle tables — ปรับตามโดเมน
 ├── auth.ts                    # JWT (jose), bcrypt
 ├── api-auth-plugin.ts         # Elysia auth plugin (derive user from cookie/token)
 ├── eden.ts                    # Eden Treaty client
@@ -68,8 +86,11 @@ components/
 
 proxy.ts                       # Next 16: route protection (redirect guest → /login)
 drizzle/
+scripts/seed.ts                # Seed data ตามโดเมน
 docker-compose.dev.yml         # PostgreSQL for dev
 ```
+
+See [references/domain-adaptation.md](./references/domain-adaptation.md) for adapting this structure to your domain (e-commerce, blog, CRM, etc.).
 
 ---
 
@@ -146,12 +167,14 @@ const loginBody = t.Object({
   password: t.String(),
 });
 
-const todoCreateBody = t.Object({
-  title: t.String(),
+// Example: สร้าง schema ตามโดเมนของคุณ
+const entityCreateBody = t.Object({
+  name: t.String(),
   description: t.Optional(t.String()),
-  completed: t.Optional(t.Boolean()),
-  dueDate: t.Optional(t.Union([t.String(), t.Null()])),
+  status: t.Optional(t.String()),
+  // เพิ่ม fields ตามความต้องการ
 });
+const entityUpdateBody = t.Partial(entityCreateBody);
 ```
 
 ### Error Response Helper
@@ -432,7 +455,7 @@ docker compose -f docker-compose.dev.yml up -d
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "bun run scripts/seed-workspaces.ts"
+    "db:seed": "bun run scripts/seed.ts"
   }
 }
 ```
@@ -478,10 +501,25 @@ See [references/file-conventions.md](./references/file-conventions.md).
 
 ---
 
+## Adapting to Your Domain
+
+| App Type | Suggested Routes | Example Entities |
+|----------|------------------|------------------|
+| **SaaS / Dashboard** | `/dashboard/overview`, `/dashboard/[feature]` | `users`, `subscriptions`, `usage` |
+| **E-commerce** | `/dashboard/products`, `/dashboard/orders`, `/dashboard/customers` | `products`, `orders`, `customers`, `categories` |
+| **Blog / CMS** | `/dashboard/posts`, `/dashboard/drafts`, `/dashboard/pages` | `posts`, `authors`, `tags`, `comments` |
+| **CRM** | `/dashboard/contacts`, `/dashboard/deals`, `/dashboard/activities` | `contacts`, `deals`, `activities`, `pipelines` |
+| **Task / Project** | `/dashboard/tasks`, `/dashboard/projects`, `/dashboard/workspaces` | `tasks`, `projects`, `workspaces` |
+
+Full guide: [domain-adaptation.md](./references/domain-adaptation.md)
+
+---
+
 ## References
 
 | Topic | File |
 |-------|------|
+| Domain adaptation | [domain-adaptation.md](./references/domain-adaptation.md) |
 | Project scaffold | [project-scaffold.md](./references/project-scaffold.md) |
 | Elysia integration | [elysia-integration.md](./references/elysia-integration.md) |
 | Drizzle | [drizzle.md](./references/drizzle.md) |

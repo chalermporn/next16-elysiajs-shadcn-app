@@ -1,6 +1,6 @@
 # Project Scaffold — New Project Setup
 
-Step-by-step guide to create a new Next.js 16 + ElysiaJS + shadcn + Drizzle project from scratch. ใช้เมื่อเริ่มโปรเจคใหม่และต้องการโครงสร้างที่ครบถ้วน
+Step-by-step guide to create a new Next.js 16 + ElysiaJS + shadcn + Drizzle project from scratch. ใช้เมื่อเริ่มโปรเจคใหม่และต้องการโครงสร้างที่ครบถ้วน — **ใช้ได้กับทุกประเภท web app** (SaaS, e-commerce, blog, CRM, etc.)
 
 ---
 
@@ -340,4 +340,4 @@ export default defineConfig({
 2. สร้าง `proxy.ts` สำหรับ protect dashboard
 3. เพิ่ม `useUser` hook
 4. เพิ่ม layout สำหรับ dashboard
-5. ต่อยอด CRUD และ UI ตามต้องการ
+5. ปรับโดเมนตามความต้องการ — ดู [domain-adaptation.md](./domain-adaptation.md) สำหรับ schema, routes, hooks ตามประเภท app (e-commerce, blog, CRM, etc.)
