@@ -84,7 +84,7 @@ describe('api-auth-plugin', () => {
 
     const app = new Elysia()
       .use(authPlugin)
-      .get('/p', () => 'ok', cfg as never);
+      .get('/p', () => new Response('ok'), cfg as never);
 
     const res = await app.handle(new Request('http://localhost/p'));
     expect(res.status).toBe(401);
@@ -99,7 +99,7 @@ describe('api-auth-plugin', () => {
 
     const app = new Elysia()
       .use(authPlugin)
-      .get('/admin', () => 'admin', cfg as never);
+      .get('/admin', () => new Response('admin'), cfg as never);
 
     const res = await app.handle(
       new Request('http://localhost/admin', {
@@ -118,7 +118,7 @@ describe('api-auth-plugin', () => {
 
     const app = new Elysia()
       .use(authPlugin)
-      .get('/admin', () => 'admin', cfg as never);
+      .get('/admin', () => new Response('admin'), cfg as never);
 
     const res = await app.handle(
       new Request('http://localhost/admin', {

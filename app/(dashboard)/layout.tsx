@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Bell } from 'lucide-react';
+import { Bell, Sparkles } from 'lucide-react';
 import { SearchBar } from '@/components/search-bar';
 import { Sidebar, SidebarToggle } from '@/components/layout/sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -31,13 +31,13 @@ export default function DashboardLayout({
   if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">กำลังโหลด...</div>
+        <div className="animate-pulse text-muted-foreground text-base">กำลังโหลด...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 overflow-hidden">
+    <div className="flex h-screen bg-linear-to-br from-background via-background to-primary/4 dark:from-background dark:via-background dark:to-primary/6 font-sans text-foreground overflow-hidden">
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onProfileClick={() => setProfileOpen(true)} />
       <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} user={user} />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
@@ -56,7 +56,8 @@ export default function DashboardLayout({
             <button
               type="button"
               onClick={() => setProfileOpen(true)}
-              className="flex items-center justify-center rounded-full overflow-hidden ring-2 ring-transparent hover:ring-primary/30 transition-all"
+              aria-label="เปิดโปรไฟล์"
+              className="flex items-center justify-center rounded-full overflow-hidden ring-2 ring-transparent hover:ring-primary/30 transition-all duration-200 cursor-pointer min-h-11 min-w-11"
             >
               <Avatar className="size-8">
                 {user.avatarUrl ? (
@@ -69,27 +70,35 @@ export default function DashboardLayout({
             </button>
           </div>
         </header>
-        <header className="hidden md:flex bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-b border-slate-200/60 dark:border-slate-700/60 px-8 py-5 items-center justify-between sticky top-0 z-10">
+        <header className="hidden md:flex bg-card/70 backdrop-blur-md border-b border-border px-8 py-5 items-center justify-between sticky top-0 z-10 transition-colors duration-200">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
               {titles[pathname] || 'Dashboard'}
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              ยินดีต้อนรับกลับมา, {user.name?.split(' ')[0] || user.email.split('@')[0]} 👋
+            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+              <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+              <span>
+                ยินดีต้อนรับกลับมา, {user.name?.split(' ')[0] || user.email.split('@')[0]}
+              </span>
             </p>
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden lg:flex items-center">
               <SearchBar />
             </div>
-            <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-full transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full border-2 border-white dark:border-slate-900" />
+            <button
+              type="button"
+              aria-label="การแจ้งเตือน"
+              className="min-h-11 min-w-11 p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors duration-200 relative cursor-pointer"
+            >
+              <Bell size={20} className="mx-auto" aria-hidden />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full border-2 border-card" />
             </button>
             <button
               type="button"
               onClick={() => setProfileOpen(true)}
-              className="flex items-center justify-center rounded-full overflow-hidden ring-2 ring-transparent hover:ring-primary/30 transition-all"
+              aria-label="เปิดโปรไฟล์"
+              className="min-h-11 min-w-11 flex items-center justify-center rounded-full overflow-hidden ring-2 ring-transparent hover:ring-primary/30 transition-all duration-200 cursor-pointer"
             >
               <Avatar className="size-9">
                 {user.avatarUrl ? (

@@ -25,7 +25,12 @@ export async function proxy(request: NextRequest) {
   }
 
   // Public routes
-  if (pathname === '/login' || pathname === '/register') {
+  if (
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/forgot-password' ||
+    pathname === '/reset-password'
+  ) {
     const token = request.cookies.get(AUTH_COOKIE)?.value;
     if (token) {
       try {

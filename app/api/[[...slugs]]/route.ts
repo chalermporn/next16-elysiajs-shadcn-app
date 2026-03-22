@@ -1,14 +1,14 @@
+import crypto from 'node:crypto';
 import { Elysia, t } from 'elysia';
 import { eq, and, or, desc, ilike } from 'drizzle-orm';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { db } from '@/lib/db';
-import { users, todos, workspaces } from '@/lib/schema';
+import { users, todos, workspaces, passwordResetTokens } from '@/lib/schema';
 import {
   hashPassword,
   verifyPassword,
   createJWT,
-  verifyJWT,
 } from '@/lib/auth';
 import { authPlugin, AUTH_COOKIE } from '@/lib/api-auth-plugin';
 
@@ -22,6 +22,15 @@ const registerBody = t.Object({
 const loginBody = t.Object({
   email: t.String({ format: 'email' }),
   password: t.String(),
+});
+
+const forgotPasswordBody = t.Object({
+  email: t.String({ format: 'email' }),
+});
+
+const resetPasswordBody = t.Object({
+  token: t.String({ minLength: 1 }),
+  password: t.String({ minLength: 6 }),
 });
 
 const todoCreateBody = t.Object({
@@ -163,7 +172,8 @@ const app = new Elysia({ prefix: '/api' })
         .set({ lastLoginAt: new Date(), updatedAt: new Date() })
         .where(eq(users.id, user.id));
       const token = await createJWT(user.id, user.role);
-      const { passwordHash: _, ...safeUser } = user;
+      const { passwordHash, ...safeUser } = user;
+      void passwordHash; // exclude from response
       const res = Response.json({ token, user: safeUser });
       return setAuthCookie(res, token);
     },
@@ -173,6 +183,79 @@ const app = new Elysia({ prefix: '/api' })
     const res = Response.json({ ok: true });
     return clearAuthCookie(res);
   })
+  .post(
+    '/auth/forgot-password',
+    async ({ body, db }) => {
+      const [user] = await db
+        .select({ id: users.id, email: users.email })
+        .from(users)
+        .where(eq(users.email, body.email))
+        .limit(1);
+      // Always return success to prevent email enumeration
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL ||
+        (process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : 'http://localhost:3000');
+      if (!user) {
+        return Response.json({
+          ok: true,
+          message: 'หากอีเมลนี้มีในระบบ คุณจะได้รับลิงก์รีเซ็ตรหัสผ่าน',
+        });
+      }
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      await db
+        .delete(passwordResetTokens)
+        .where(eq(passwordResetTokens.userId, user.id));
+      await db.insert(passwordResetTokens).values({
+        userId: user.id,
+        token,
+        expiresAt,
+      });
+      // TODO: Send email with reset link. For dev, log or return URL.
+      const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+      if (process.env.NODE_ENV !== 'production') {
+        console.info('[DEV] Reset URL:', resetUrl);
+      }
+      return Response.json({
+        ok: true,
+        message: 'หากอีเมลนี้มีในระบบ คุณจะได้รับลิงก์รีเซ็ตรหัสผ่าน',
+        ...(process.env.NODE_ENV !== 'production' && { devResetUrl: resetUrl }),
+      });
+    },
+    { body: forgotPasswordBody }
+  )
+  .post(
+    '/auth/reset-password',
+    async ({ body, db }) => {
+      const [row] = await db
+        .select({
+          id: passwordResetTokens.id,
+          userId: passwordResetTokens.userId,
+          expiresAt: passwordResetTokens.expiresAt,
+        })
+        .from(passwordResetTokens)
+        .where(eq(passwordResetTokens.token, body.token))
+        .limit(1);
+      if (!row || new Date() > row.expiresAt) {
+        return jsonError('ลิงก์ไม่ถูกต้องหรือหมดอายุ', 'INVALID_TOKEN', 400);
+      }
+      const passwordHash = await hashPassword(body.password);
+      await db
+        .update(users)
+        .set({ passwordHash, updatedAt: new Date() })
+        .where(eq(users.id, row.userId));
+      await db
+        .delete(passwordResetTokens)
+        .where(eq(passwordResetTokens.id, row.id));
+      return Response.json({
+        ok: true,
+        message: 'รีเซ็ตรหัสผ่านสำเร็จ สามารถเข้าสู่ระบบได้เลย',
+      });
+    },
+    { body: resetPasswordBody }
+  )
 
   // --- Users ---
   .get(

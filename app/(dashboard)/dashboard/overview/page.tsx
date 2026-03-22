@@ -33,9 +33,6 @@ export default function OverviewPage() {
   const backlog = d?.backlog ?? 0;
   const total = d?.total ?? 0;
   const byCategory = d?.byCategory ?? {};
-  const prod = byCategory?.Production ?? 0;
-  const mkt = byCategory?.Marketing ?? 0;
-  const adm = byCategory?.Admin ?? 0;
   const getPercent = (cat: string) =>
     total === 0 ? 0 : ((byCategory[cat] || 0) / total) * 100;
   const pieGradient = `conic-gradient(#2563eb 0% ${getPercent('Production')}%, #f59e0b ${getPercent('Production')}% ${getPercent('Production') + getPercent('Marketing')}%, #94a3b8 ${getPercent('Production') + getPercent('Marketing')}% 100%)`;
@@ -149,7 +146,7 @@ export default function OverviewPage() {
               <div className="border-t border-slate-100 dark:border-slate-700 w-full h-0" />
               <div className="border-t border-slate-100 dark:border-slate-700 w-full h-0" />
             </div>
-            {barData.map((bar, i) => (
+            {barData.map((bar) => (
               <div
                 key={bar.dateKey}
                 className="w-full flex flex-col items-center gap-3 relative z-10 group h-full justify-end"

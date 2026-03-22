@@ -26,6 +26,16 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  token: varchar('token', { length: 64 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const workspaces = pgTable('workspaces', {
   id: uuid('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: varchar('name', { length: 255 }).notNull(),
@@ -62,7 +72,15 @@ export const todos = pgTable(
 
 export const usersRelations = relations(users, ({ many }) => ({
   todos: many(todos),
+  passwordResetTokens: many(passwordResetTokens),
 }));
+
+export const passwordResetTokensRelations = relations(
+  passwordResetTokens,
+  ({ one }) => ({
+    user: one(users),
+  })
+);
 
 export const todosRelations = relations(todos, ({ one }) => ({
   user: one(users),

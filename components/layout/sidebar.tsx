@@ -8,7 +8,6 @@ import {
   Users,
   Activity,
   ListTodo,
-  LogOut,
   Menu,
   X,
   TrendingUp,
@@ -60,29 +59,33 @@ export function Sidebar({
       )}
       <div
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-[280px] bg-[#0f172a] text-slate-300 shadow-2xl',
-          'flex flex-col border-r border-slate-800',
-          'transform transition-all duration-300',
+          'fixed inset-y-0 left-0 z-50 w-[280px] bg-[oklch(0.19_0.055_262)] text-slate-300 shadow-2xl',
+          'flex flex-col border-r border-white/10',
+          'transform transition-all duration-300 ease-out',
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
           'md:relative'
         )}
       >
         <div className="px-6 py-8 flex items-center justify-between">
-          <Link href="/dashboard/todos" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <CheckCircle2 className="text-white" size={20} />
+          <Link
+            href="/dashboard/todos"
+            className="flex items-center gap-3 cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[oklch(0.19_0.055_262)]"
+          >
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/35 ring-1 ring-white/10">
+              <CheckCircle2 className="text-white" size={20} aria-hidden />
             </div>
             <span className="text-white font-bold text-xl tracking-tight">
-              Todo<span className="text-amber-400">Flow</span>
+              Todo<span className="text-sky-300">Flow</span>
             </span>
           </Link>
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden text-slate-400 hover:text-white"
+            className="md:hidden text-slate-400 hover:text-white min-h-11 min-w-11 cursor-pointer"
             onClick={() => setIsOpen(false)}
+            aria-label="ปิดเมนู"
           >
-            <X size={20} />
+            <X size={20} aria-hidden />
           </Button>
         </div>
 
@@ -93,7 +96,7 @@ export function Sidebar({
               setIsOpen(false);
               onProfileClick?.();
             }}
-            className="w-full text-left p-4 rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-900 border border-slate-700/50 relative overflow-hidden hover:border-slate-600/80 transition-colors"
+            className="w-full text-left p-4 rounded-2xl bg-linear-to-br from-white/8 to-white/3 border border-white/10 relative overflow-hidden hover:border-sky-500/30 hover:bg-white/5 transition-colors duration-200 cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <Avatar className="size-10 shrink-0 border-2 border-slate-600">
@@ -111,11 +114,10 @@ export function Sidebar({
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span
                     className={cn(
-                      'w-1.5 h-1.5 rounded-full',
-                      user.role === 'admin'
-                        ? 'bg-amber-400'
-                        : 'bg-blue-400'
+                      'w-1.5 h-1.5 rounded-full shrink-0',
+                      user.role === 'admin' ? 'bg-sky-400' : 'bg-emerald-400'
                     )}
+                    aria-hidden
                   />
                   <p className="text-[11px] font-medium text-slate-400 uppercase">
                     {user.role}
@@ -139,26 +141,26 @@ export function Sidebar({
                 href={item.path}
                 onClick={() => setIsOpen(false)}
                 className={cn(
-                  'w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all',
+                  'w-full flex items-center gap-3 px-3 py-3 min-h-11 rounded-xl transition-colors duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50',
                   isActive
-                    ? 'bg-blue-600/10 text-blue-400 font-semibold'
-                    : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                    ? 'bg-sky-500/15 text-sky-300 font-semibold ring-1 ring-sky-500/20'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
                 )}
               >
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} aria-hidden />
                 {item.name}
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-6 bg-blue-500 rounded-full" />
+                  <div className="ml-auto w-1 h-7 bg-sky-400 rounded-full shrink-0" aria-hidden />
                 )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 mt-auto border-t border-slate-800/80">
+        <div className="p-4 mt-auto border-t border-white/10">
           <Button
             variant="ghost"
-            className="w-full justify-start gap-3 text-slate-400 hover:bg-red-500/10 hover:text-red-400"
+            className="w-full justify-start gap-3 min-h-11 text-slate-400 hover:bg-red-500/10 hover:text-red-300 cursor-pointer transition-colors duration-200"
             onClick={logout}
           >
             ออกจากระบบ
@@ -178,10 +180,11 @@ export function SidebarToggle({
     <Button
       variant="ghost"
       size="icon"
-      className="md:hidden -ml-2 text-muted-foreground hover:text-foreground"
+      className="md:hidden -ml-2 min-h-11 min-w-11 text-muted-foreground hover:text-foreground cursor-pointer"
       onClick={onClick}
+      aria-label="เปิดเมนู"
     >
-      <Menu size={24} />
+      <Menu size={24} aria-hidden />
     </Button>
   );
 }
